@@ -1,56 +1,46 @@
+use bluetooth_serial_port::*;
 use gdnative::prelude::*;
 use probe_rs::Probe;
 use probe_rs_rtt::Rtt;
-use std::sync::{Arc, Mutex};
 use std::convert::TryInto;
+use std::io::Read;
+use std::sync::{Arc, Mutex};
+
+use std::panic;
 
 #[derive(NativeClass)]
 #[inherit(Node)]
 pub struct Sensor {
-    rtt: Option<Rtt>,
-    channell: Option<probe_rs_rtt::UpChannel>,
+    socket: Option<BtSocket>,
+    buf: [u8; 100],
+    idx: usize,
+    last_read: (f32, f32, f32),
 }
 
 #[methods]
 impl Sensor {
     fn new(_owner: &Node) -> Self {
         Sensor {
-            rtt: None,
-            channell: None,
+            socket: None,
+            buf: [0; 100],
+            idx: 0,
+            last_read: (0.0, 0.0, 0.0),
         }
     }
 
     #[export]
     fn _ready(&mut self, _owner: &Node) {
-        godot_print!("hello, rworld.");
-        let tmp = Probe::list_all();
-        godot_print!("probes {:?}", tmp);
-        let probe = tmp[0].open().expect("unable to open probe");
-        godot_print!("hello, probe.");
-        let session = probe
-            .attach("stm32f103C8")
-            .expect("unable to start session");
-        godot_print!("hello, session.");
-        let rtt = Rtt::attach(Arc::new(Mutex::new(session))).expect("unable to get rtt");
-        godot_print!("hello, rtt.");
+        let mut socket = BtSocket::new(BtProtocol::RFCOMM).unwrap();
+        let mac_raw = hex::decode("70F209016500").unwrap();
+        let mut mac: [u8; 6] = [0; 6];
+        mac.copy_from_slice(&mac_raw);
 
-        self.rtt = Some(rtt);
+        godot_print!("connection {:?}", socket.connect(BtAddr(mac)));
+
+        self.socket = Some(socket);
     }
 
-    fn try_get_channel(&mut self) {
-        match &mut self.rtt {
-            Some(rtt) => {
-                if let Some(input) = rtt.up_channels().take(0) {
-                    self.channell = Some(input);
-                }
-            }
-            None => (),
-        }
-    }
-
-    fn parse_data(ch: &mut probe_rs_rtt::UpChannel) -> (f32, f32, f32) {
-        let mut buf = [0; 8];
-        ch.read(&mut buf).expect("failed to read from channel");
+    fn parse_data(buf: &[u8]) -> (f32, f32, f32) {
         let (one, two) = buf.split_at(4);
 
         let x = f32::from_le_bytes(one.try_into().unwrap());
@@ -62,17 +52,48 @@ impl Sensor {
 
     #[export]
     fn get_angles(&mut self, _owner: &Node) -> (f32, f32, f32) {
-        if let Some(input) = &mut self.channell {
-            // godot_print!("channel {:?}", input);
-            Sensor::parse_data(input)
-        } else {
-            self.try_get_channel();
-            (0.5, 0.3, 0.7)
+        if let Some(input) = &mut self.socket {
+            let mut buf = [0; 40];
+            let read_len = input.read(&mut buf).expect("failed to read from channel");
+            godot_print!("read {} bytes", read_len);
+
+            if self.idx + buf.len() >= self.buf.len() {
+                self.idx = 0;
+            }
+
+            self.buf[self.idx..self.idx + buf.len()].clone_from_slice(&buf);
+            self.idx += read_len;
+
+            let markers = self.buf[..self.idx]
+                .iter()
+                .map(|w| { if *w == 0b11111111 { 'M' } else { '.' } })
+                .collect::<String>();
+
+            godot_print!("{}", markers);
+
+            let m = self.buf[..self.idx]
+                .split(|w| *w == 0b11111111 )
+                .collect::<Vec<&[u8]>>()
+                .into_iter()
+                .rev()
+                .next();
+            
+            if let Some(payload) = m {
+                if payload.len() == 8 {
+                    self.last_read = Sensor::parse_data(payload);
+                } else {
+                    godot_print!("invalid length {}", payload.len());
+                }
+            }
         }
+
+        self.last_read
     }
 }
 
 fn init(handle: InitHandle) {
+    panic::set_hook(Box::new(|p| godot_print!("Panic {:?}", p)));
+
     handle.add_class::<Sensor>();
 }
 
