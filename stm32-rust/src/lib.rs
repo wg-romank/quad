@@ -55,7 +55,7 @@ impl Sensor {
         if let Some(input) = &mut self.socket {
             let mut buf = [0; 40];
             let read_len = input.read(&mut buf).expect("failed to read from channel");
-            godot_print!("read {} bytes", read_len);
+            // godot_print!("read {} bytes", read_len);
 
             if self.idx + buf.len() >= self.buf.len() {
                 self.idx = 0;
@@ -69,7 +69,7 @@ impl Sensor {
                 .map(|w| { if *w == 0b11111111 { 'M' } else { '.' } })
                 .collect::<String>();
 
-            godot_print!("{}", markers);
+            // godot_print!("{}", markers);
 
             let m = self.buf[..self.idx]
                 .split(|w| *w == 0b11111111 )
@@ -82,7 +82,7 @@ impl Sensor {
                 if payload.len() == 8 {
                     self.last_read = Sensor::parse_data(payload);
                 } else {
-                    godot_print!("invalid length {}", payload.len());
+                    // godot_print!("invalid length {}", payload.len());
                 }
             }
         }

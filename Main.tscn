@@ -9,9 +9,9 @@ size = Vector3( 0.2, 0.1, 0.4 )
 script = ExtResource( 1 )
 
 [node name="Paddle" type="MeshInstance" parent="."]
-transform = Transform( 1, 0, 0, 0, 1, 0, 0, 0, 1, -0.106069, -0.00628769, -0.0297935 )
+transform = Transform( 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.03 )
 mesh = SubResource( 1 )
 material/0 = null
 
 [node name="ClippedCamera" type="ClippedCamera" parent="."]
-transform = Transform( 1, 0, 0, 0, 0.970443, 0.241329, 0, -0.241329, 0.970443, -0.0629772, 0.19281, 0.754642 )
+transform = Transform( 1, 0, 0, 0, 0.970443, 0.241329, 0, -0.241329, 0.970443, 0, 0.197, 0.755 )
