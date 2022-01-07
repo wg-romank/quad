@@ -1,0 +1,2 @@
+[workspace]
+members = ["stm32-rust", "stm32-device"]

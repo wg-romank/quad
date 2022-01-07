@@ -1,3 +1,0 @@
-WARN probe_rs::probe::stlink
-> check_status failed: SwdApFault
-Error reading from RTT: Error communicating with probe: A core architecture specific error occured

@@ -1,7 +1,5 @@
 use bluetooth_serial_port::*;
 use gdnative::prelude::*;
-use probe_rs::Probe;
-use probe_rs_rtt::Rtt;
 use std::convert::TryInto;
 use std::io::Read;
 use std::sync::{Arc, Mutex};
@@ -46,7 +44,6 @@ impl Sensor {
         let x = f32::from_le_bytes(one.try_into().unwrap());
         let y = f32::from_le_bytes(two.try_into().unwrap());
 
-        // (-0.5, 0.3, -0.7)
         (x, y, 0.0)
     }
 
