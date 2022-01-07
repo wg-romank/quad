@@ -33,6 +33,7 @@ mod app {
     use crate::spatial::SpatialOrientationDevice;
     use common::SpatialOrientation;
     use common::EOT;
+    use common::BUFF_SIZE;
 
     use mpu6050::Mpu6050;
 
@@ -40,8 +41,6 @@ mod app {
     type MyMono = Systick<100>;
 
     type MPU = Mpu6050<BlockingI2c<I2C1, (PB6<Alternate<OpenDrain>>, PB7<Alternate<OpenDrain>>)>>;
-
-    pub const BUFF_SIZE: usize = 8;
 
     #[shared]
     struct Shared {}

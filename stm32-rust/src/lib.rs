@@ -7,12 +7,17 @@ use std::panic;
 use common::EOT;
 use common::SpatialOrientation;
 
+pub const CHUNK_SIZE: usize = 16;
+pub const BUF_SIZE: usize = 40;
+
 #[derive(NativeClass)]
 #[inherit(Node)]
 pub struct Sensor {
     socket: Option<BtSocket>,
-    buf: [u8; 100],
+    buf: [u8; BUF_SIZE],
+    chunk: [u8; CHUNK_SIZE],
     idx: usize,
+    last_read_idx: usize,
     last_read: (f32, f32, f32),
 }
 
@@ -21,16 +26,18 @@ impl Sensor {
     fn new(_owner: &Node) -> Self {
         Sensor {
             socket: None,
-            buf: [0; 100],
+            buf: [0; BUF_SIZE],
+            chunk: [0; CHUNK_SIZE],
             idx: 0,
+            last_read_idx: 0,
             last_read: (0.0, 0.0, 0.0),
         }
     }
 
     #[export]
-    fn _ready(&mut self, _owner: &Node) {
+    fn connect(&mut self, _owner: &Node, sensor_mac: String) {
         let mut socket = BtSocket::new(BtProtocol::RFCOMM).unwrap();
-        let mac_raw = hex::decode("70F209016500").unwrap();
+        let mac_raw = hex::decode(sensor_mac).unwrap();
         let mut mac: [u8; 6] = [0; 6];
         mac.copy_from_slice(&mac_raw);
 
@@ -41,24 +48,15 @@ impl Sensor {
 
     #[export]
     fn get_angles(&mut self, _owner: &Node) -> (f32, f32, f32) {
-        if let Some(input) = &mut self.socket {
-            let mut buf = [0; 20];
-            let read_len = input.read(&mut buf).expect("failed to read from channel");
-            // godot_print!("read {} bytes", read_len);
+        if let Some(s) = &mut self.socket {
+            let read_len = s.read(&mut self.chunk).expect("failed to read from channel");
 
-            if self.idx + buf.len() >= self.buf.len() {
+            if self.idx + CHUNK_SIZE >= BUF_SIZE {
                 self.idx = 0;
             }
 
-            self.buf[self.idx..self.idx + buf.len()].clone_from_slice(&buf);
+            self.buf[self.idx..self.idx + CHUNK_SIZE].clone_from_slice(&self.chunk);
             self.idx += read_len;
-
-            let markers = self.buf[..self.idx]
-                .iter()
-                .map(|w| { if *w == EOT { 'M' } else { '.' } })
-                .collect::<String>();
-
-            // godot_print!("{}", markers);
 
             let m = self.buf[..self.idx]
                 .split(|w| *w == EOT )
@@ -68,11 +66,9 @@ impl Sensor {
                 .next();
             
             if let Some(payload) = m {
-                if payload.len() == 8 {
+                if payload.len() == common::BUFF_SIZE {
                     let so = SpatialOrientation::from_byte_slice(payload);
                     self.last_read = (so.pitch, so.roll, 0.0);
-                } else {
-                    // godot_print!("invalid length {}", payload.len());
                 }
             }
         }

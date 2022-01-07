@@ -4,7 +4,7 @@ extends Spatial
 onready var sensor = Sensor.new()
 
 func _ready():
-	sensor._ready()
+	sensor.connect("70F209016500")
 
 
 func _physics_process(delta):

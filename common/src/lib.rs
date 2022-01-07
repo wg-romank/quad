@@ -1,6 +1,8 @@
 #![no_std]
 
 pub const EOT: u8 = 0b11111111;
+pub const BUFF_SIZE: usize = 8;
+
 
 #[derive(Debug)]
 pub struct SpatialOrientation {
