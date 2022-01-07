@@ -30,7 +30,9 @@ mod app {
 
     use systick_monotonic::*;
 
-    use crate::spatial::SpatialOrientation;
+    use crate::spatial::SpatialOrientationDevice;
+    use common::SpatialOrientation;
+    use common::EOT;
 
     use mpu6050::Mpu6050;
 
@@ -39,7 +41,7 @@ mod app {
 
     type MPU = Mpu6050<BlockingI2c<I2C1, (PB6<Alternate<OpenDrain>>, PB7<Alternate<OpenDrain>>)>>;
 
-    const BUFF_SIZE: usize = 8;
+    pub const BUFF_SIZE: usize = 8;
 
     #[shared]
     struct Shared {}
@@ -148,7 +150,7 @@ mod app {
 
         // rprintln!("{:?}", s);
         IntoIterator::into_iter(s.to_byte_array()).for_each(|byt| { nb::block!(tx.write(byt)).unwrap() });
-        nb::block!(tx.write(0b11111111 as u8)).unwrap();
+        nb::block!(tx.write(EOT)).unwrap();
 
         gyro::spawn_at(spawn_next_at, mpu, offset, s);
     }

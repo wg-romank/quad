@@ -8,5 +8,8 @@ gdnative = "0.9"
 bluetooth-serial-port = "0.6.0"
 hex = "0.4.3"
 
+common = { path = "../common" }
+
+
 [lib]
 crate-type = ["cdylib"]

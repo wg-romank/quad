@@ -19,6 +19,8 @@ nb = "*"
 
 mpu6050 = { path = "../../../mpu6050" }
 
+common = { path = "../common" }
+
 [dependencies.stm32f1xx-hal]
 version = "0.8.0"
 features = ["rt", "stm32f103", "medium"]

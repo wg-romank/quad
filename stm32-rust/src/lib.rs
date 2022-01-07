@@ -1,10 +1,11 @@
 use bluetooth_serial_port::*;
 use gdnative::prelude::*;
-use std::convert::TryInto;
 use std::io::Read;
-use std::sync::{Arc, Mutex};
 
 use std::panic;
+
+use common::EOT;
+use common::SpatialOrientation;
 
 #[derive(NativeClass)]
 #[inherit(Node)]
@@ -38,19 +39,10 @@ impl Sensor {
         self.socket = Some(socket);
     }
 
-    fn parse_data(buf: &[u8]) -> (f32, f32, f32) {
-        let (one, two) = buf.split_at(4);
-
-        let x = f32::from_le_bytes(one.try_into().unwrap());
-        let y = f32::from_le_bytes(two.try_into().unwrap());
-
-        (x, y, 0.0)
-    }
-
     #[export]
     fn get_angles(&mut self, _owner: &Node) -> (f32, f32, f32) {
         if let Some(input) = &mut self.socket {
-            let mut buf = [0; 40];
+            let mut buf = [0; 20];
             let read_len = input.read(&mut buf).expect("failed to read from channel");
             // godot_print!("read {} bytes", read_len);
 
@@ -63,13 +55,13 @@ impl Sensor {
 
             let markers = self.buf[..self.idx]
                 .iter()
-                .map(|w| { if *w == 0b11111111 { 'M' } else { '.' } })
+                .map(|w| { if *w == EOT { 'M' } else { '.' } })
                 .collect::<String>();
 
             // godot_print!("{}", markers);
 
             let m = self.buf[..self.idx]
-                .split(|w| *w == 0b11111111 )
+                .split(|w| *w == EOT )
                 .collect::<Vec<&[u8]>>()
                 .into_iter()
                 .rev()
@@ -77,7 +69,8 @@ impl Sensor {
             
             if let Some(payload) = m {
                 if payload.len() == 8 {
-                    self.last_read = Sensor::parse_data(payload);
+                    let so = SpatialOrientation::from_byte_slice(payload);
+                    self.last_read = (so.pitch, so.roll, 0.0);
                 } else {
                     // godot_print!("invalid length {}", payload.len());
                 }
