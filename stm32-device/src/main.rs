@@ -183,17 +183,18 @@ mod app {
 
     #[task(local = [usart1_tx], capacity = 1)]
     fn gyro(cx: gyro::Context, mut mpu: MPU, offset: Vector3<f32>, mut s: SpatialOrientation) {
+        rprintln!("GYRO");
         let tx: &mut serial::Tx<USART1> = cx.local.usart1_tx;
         let spawn_next_at = monotonics::now() + 4.micros();
 
-        // let raw_gyro = mpu.get_gyro().expect("unable to get gyro");
-        // let angles = mpu.get_acc_angles().expect("unable to get acc angles");
+        let raw_gyro = mpu.get_gyro().expect("unable to get gyro");
+        let angles = mpu.get_acc_angles().expect("unable to get acc angles");
 
-        // s.adjust(raw_gyro - offset, angles);
+        s.adjust(raw_gyro - offset, angles);
 
-        // rprintln!("{:?}", s);
-        // IntoIterator::into_iter(s.to_byte_array()).for_each(|byt| { nb::block!(tx.write(byt)).unwrap() });
-        // nb::block!(tx.write(EOT)).unwrap();
+        rprintln!("{:?}", s);
+        IntoIterator::into_iter(s.to_byte_array()).for_each(|byt| { nb::block!(tx.write(byt)).unwrap() });
+        nb::block!(tx.write(EOT)).unwrap();
 
         gyro::spawn_at(spawn_next_at, mpu, offset, s);
     }
