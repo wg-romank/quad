@@ -18,7 +18,6 @@ libm = "0.2.1"
 nb = "*"
 
 mpu6050 = { path = "../../../mpu6050" }
-
 common = { path = "../common" }
 
 [dependencies.stm32f1xx-hal]

@@ -1,11 +1,13 @@
 use bluetooth_serial_port::*;
 use gdnative::prelude::*;
 use std::io::Read;
+use std::io::Write;
 
 use std::panic;
 
 use common::EOT;
 use common::SpatialOrientation;
+use common::Command;
 
 pub const CHUNK_SIZE: usize = 16;
 pub const BUF_SIZE: usize = 40;
@@ -17,7 +19,6 @@ pub struct Sensor {
     buf: [u8; BUF_SIZE],
     chunk: [u8; CHUNK_SIZE],
     idx: usize,
-    last_read_idx: usize,
     last_read: (f32, f32, f32),
 }
 
@@ -29,8 +30,19 @@ impl Sensor {
             buf: [0; BUF_SIZE],
             chunk: [0; CHUNK_SIZE],
             idx: 0,
-            last_read_idx: 0,
             last_read: (0.0, 0.0, 0.0),
+        }
+    }
+
+    #[export]
+    fn send_throttle(&mut self, _owner: &Node, throttle_on: bool, throttle: f32) {
+        let command = Command { throttle_on, throttle };
+        if let Some(s) = &mut self.socket {
+            let buf = command.to_byte_array();
+
+            if s.write(&buf).is_err() {
+                godot_print!("failed sending command to device");
+            }
         }
     }
 

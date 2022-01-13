@@ -15,3 +15,46 @@ material/0 = null
 
 [node name="ClippedCamera" type="ClippedCamera" parent="."]
 transform = Transform( 1, 0, 0, 0, 0.970443, 0.241329, 0, -0.241329, 0.970443, 0, 0.197, 0.755 )
+
+[node name="Control" type="Control" parent="."]
+margin_right = 40.0
+margin_bottom = 40.0
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="VBoxContainer" type="VBoxContainer" parent="Control"]
+margin_right = 40.0
+margin_bottom = 40.0
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="HBoxContainer" type="HBoxContainer" parent="Control/VBoxContainer"]
+margin_right = 187.0
+margin_bottom = 14.0
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="Label" type="Label" parent="Control/VBoxContainer/HBoxContainer"]
+margin_right = 63.0
+margin_bottom = 14.0
+text = "Device ID"
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="TextEdit" type="TextEdit" parent="Control/VBoxContainer/HBoxContainer"]
+margin_left = 67.0
+margin_right = 187.0
+margin_bottom = 14.0
+rect_min_size = Vector2( 120, 0 )
+text = "70F209016500"
+
+[node name="Button" type="Button" parent="Control/VBoxContainer"]
+margin_top = 18.0
+margin_right = 187.0
+margin_bottom = 38.0
+text = "Connect"
+[connection signal="button_up" from="Control/VBoxContainer/Button" to="." method="_on_Button_button_up"]
