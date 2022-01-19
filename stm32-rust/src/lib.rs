@@ -1,5 +1,6 @@
 use bluetooth_serial_port::*;
 use gdnative::prelude::*;
+use hex::FromHexError;
 use std::io::Read;
 use std::io::Write;
 
@@ -12,6 +13,34 @@ use common::Command;
 pub const CHUNK_SIZE: usize = 16;
 pub const BUF_SIZE: usize = 40;
 
+enum Stm32Error {
+    BtConnection(String),
+    Command(String),
+    Misc(String)
+}
+
+impl ToVariant for Stm32Error {
+    fn to_variant(&self) -> Variant {
+        match &self {
+            &Self::BtConnection(e) => Variant::from_str(format!("failed to connect to device: {}", e)),
+            &Self::Command(e) => Variant::from_str(format!("failed sending command {}", e)),
+            &Self::Misc(e) => Variant::from_str(e),
+        }
+    }
+}
+
+impl From<BtError> for Stm32Error {
+    fn from(e: BtError) -> Self {
+        Stm32Error::BtConnection(e.to_string())
+    }
+}
+
+impl From<FromHexError> for Stm32Error {
+    fn from(_: FromHexError) -> Self {
+        Stm32Error::Misc(format!("malformed hex string"))
+    }
+}
+
 #[derive(NativeClass)]
 #[inherit(Node)]
 pub struct Sensor {
@@ -20,6 +49,12 @@ pub struct Sensor {
     chunk: [u8; CHUNK_SIZE],
     idx: usize,
     last_read: (f32, f32, f32),
+}
+
+impl Drop for Sensor {
+    fn drop(&mut self) {
+        todo!()
+    }
 }
 
 #[methods]
@@ -35,27 +70,32 @@ impl Sensor {
     }
 
     #[export]
-    fn send_throttle(&mut self, _owner: &Node, throttle_on: bool, throttle: f32) {
+    fn send_throttle(&mut self, _owner: &Node, throttle_on: bool, throttle: f32) -> Result<(), Stm32Error> {
         let command = Command { throttle_on, throttle };
         if let Some(s) = &mut self.socket {
             let buf = command.to_byte_array();
 
-            if s.write(&buf).is_err() {
-                godot_print!("failed sending command to device");
+            if !s.write(&buf).is_ok() {
+                Err(Stm32Error::Command(format!("throttle")))
+            } else {
+                Ok(())
             }
+        } else {
+            Err(Stm32Error::BtConnection(format!("not connected")))
         }
     }
 
     #[export]
-    fn connect(&mut self, _owner: &Node, sensor_mac: String) {
-        let mut socket = BtSocket::new(BtProtocol::RFCOMM).unwrap();
-        let mac_raw = hex::decode(sensor_mac).unwrap();
+    fn connect(&mut self, _owner: &Node, sensor_mac: String) -> Result<(), Stm32Error> {
+        let mac_raw = hex::decode(sensor_mac)?;
         let mut mac: [u8; 6] = [0; 6];
         mac.copy_from_slice(&mac_raw);
 
-        godot_print!("connection {:?}", socket.connect(BtAddr(mac)));
-
+        let mut socket = BtSocket::new(BtProtocol::RFCOMM)?;
+        socket.connect(BtAddr(mac))?;
         self.socket = Some(socket);
+
+        Ok(())
     }
 
     #[export]
