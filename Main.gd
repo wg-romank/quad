@@ -24,13 +24,17 @@ func _physics_process(delta):
 		#	$Paddle.rotation = Vector3(tmp[0], tmp[2], -tmp[1])
 
 func _process(delta):
-	if connected:
-		sensor.send_throttle(throttle_on, throttle_value)
+	pass
+	#if connected:
+	#	sensor.send_throttle(throttle_on, throttle_value)
 
 func _input(event):
 	if InputMap.event_is_action(event, "throttle"):
 		throttle_value = event.get_axis_value()
 	throttle_on =  Input.is_action_pressed("throttle_on")
+
+	if connected:
+		sensor.send_throttle(throttle_on, throttle_value)
 
 func _on_Button_button_up():
 	var sensor_mac = $Control/VBoxContainer/HBoxContainer/TextEdit.text

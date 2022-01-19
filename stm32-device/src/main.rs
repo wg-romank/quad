@@ -118,7 +118,6 @@ mod app {
 
         // PWM
         let mut en12 = gpiob.pb9.into_push_pull_output(&mut gpiob.crh);
-        en12.set_high();
 
         let mot1 = gpiob.pb8.into_alternate_push_pull(&mut gpiob.crh);
 
@@ -207,18 +206,18 @@ mod app {
 
             // todo: find a better way
             // workaround malformed packet
-            // if command.throttle_on {
-            //     cx.local.en12.set_high();
-            // } else {
-            //     cx.local.en12.set_low();
-            // }
+            if command.throttle_on {
+                cx.local.en12.set_high();
+            } else {
+                cx.local.en12.set_low();
+            }
 
-            // if command.throttle <= 1.0 && command.throttle >= 0.0 {
-            //     let max_duty = cx.local.pwm.get_max_duty();
-            //     let duty = (max_duty as f32 * command.throttle) as u16;
-            //     cx.local.pwm.set_duty(Channel::C3, duty);
-            //     rprintln!("duty {}", duty);
-            // }
+            if command.throttle <= 1.0 && command.throttle >= 0.0 {
+                let max_duty = cx.local.pwm.get_max_duty();
+                let duty = (max_duty as f32 * command.throttle) as u16;
+                cx.local.pwm.set_duty(Channel::C3, duty);
+                rprintln!("duty {}", duty);
+            }
 
             let (rx, channel) = rx.release();
             rx.clear_idle_interrupt();
