@@ -17,11 +17,11 @@ mod app {
     use stm32f1xx_hal::timer::{Tim2NoRemap, Timer, Tim4NoRemap, Event as TEvent, CountDownTimer};
     use stm32f1xx_hal::{
         gpio::{
-            gpiob::{PB6, PB7}, CRH,
+            gpiob::{PB4, PB6, PB7, PB8, PB9, PB10, PB11}, CRH,
             Alternate, OpenDrain, Pin, PushPull, Output
         },
         i2c::{BlockingI2c, DutyCycle, Mode},
-        pac::{I2C1, TIM1, TIM2, TIM3, TIM4},
+        pac::{I2C2, TIM1, TIM2, TIM3, TIM4},
         prelude::*,
         pwm::{C3, Channel, Pwm},
         serial::{Config, Serial, Tx, Event, RxDma1},
@@ -39,8 +39,8 @@ mod app {
     #[monotonic(binds = SysTick, default = true)]
     type MyMono = Systick<100>;
 
-    type MPU = Mpu6050<BlockingI2c<I2C1, (PB6<Alternate<OpenDrain>>, PB7<Alternate<OpenDrain>>)>>;
-    type PWM = Pwm<TIM4, Tim4NoRemap, C3, Pin<Alternate<PushPull>, CRH, 'B', 8_u8>>;
+    type MPU = Mpu6050<BlockingI2c<I2C2, (PB10<Alternate<OpenDrain>>, PB11<Alternate<OpenDrain>>)>>;
+    type MFR = Pwm<TIM4, Tim4NoRemap, C3, PB8<Alternate<PushPull>>>;
 
     #[shared]
     struct Shared {}
@@ -49,10 +49,10 @@ mod app {
     struct Local {
         recv: Option<CircBuffer<[u8; COMMAND_SIZE], RxDma1>>,
         usart1_tx: Tx<USART1>,
-        pwm: PWM,
+        pwm: MFR,
         count: u32,
         pwm_tim: CountDownTimer<TIM2>,
-        en12: Pin<Output<PushPull>, CRH, 'B', 9_u8>,
+        en: PB4<Output<PushPull>>,
     }
 
     #[init]
@@ -97,14 +97,13 @@ mod app {
         // GYRO
         let mut gpiob = dp.GPIOB.split();
         let i2c_pins = (
-            gpiob.pb6.into_alternate_open_drain(&mut gpiob.crl),
-            gpiob.pb7.into_alternate_open_drain(&mut gpiob.crl)
+            gpiob.pb10.into_alternate_open_drain(&mut gpiob.crh),
+            gpiob.pb11.into_alternate_open_drain(&mut gpiob.crh)
         );
 
-        let i2c1 = BlockingI2c::i2c1(
-            dp.I2C1,
+        let i2c2 = BlockingI2c::i2c2(
+            dp.I2C2,
             i2c_pins,
-            &mut afio.mapr,
             Mode::Fast {
                 frequency: 400_000.hz(),
                 duty_cycle: DutyCycle::Ratio16to9,
@@ -117,7 +116,9 @@ mod app {
         );
 
         // PWM
-        let mut en12 = gpiob.pb9.into_push_pull_output(&mut gpiob.crh);
+        let (_, _, pb4) = afio.mapr.disable_jtag(gpioa.pa15, gpiob.pb3, gpiob.pb4);
+        let mut en = pb4.into_push_pull_output(&mut gpiob.crl);
+        en.set_low();
 
         let mot1 = gpiob.pb8.into_alternate_push_pull(&mut gpiob.crh);
 
@@ -129,7 +130,7 @@ mod app {
         pwm.enable(Channel::C3);
 
         //
-        let mpu = Mpu6050::new(i2c1);
+        let mpu = Mpu6050::new(i2c2);
         mpu_init::spawn_after(1.secs(), mpu);
 
         (
@@ -140,7 +141,7 @@ mod app {
                 pwm,
                 count: 0,
                 pwm_tim,
-                en12,
+                en,
             },
             init::Monotonics(mono),
         )
@@ -195,7 +196,7 @@ mod app {
         gyro::spawn_at(spawn_next_at, mpu, offset, s);
     }
 
-    #[task(binds = USART1, local = [recv, pwm, en12], priority = 2)]
+    #[task(binds = USART1, local = [recv, pwm, en], priority = 2)]
     fn on_rx(cx: on_rx::Context) {
         if let Some(rx) = cx.local.recv.take() {
             let (buf, mut rx) = rx.stop();
@@ -207,9 +208,9 @@ mod app {
             // todo: find a better way
             // workaround malformed packet
             if command.throttle_on {
-                cx.local.en12.set_high();
+                cx.local.en.set_high();
             } else {
-                cx.local.en12.set_low();
+                cx.local.en.set_low();
             }
 
             if command.throttle <= 1.0 && command.throttle >= 0.0 {
