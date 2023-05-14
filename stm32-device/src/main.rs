@@ -157,20 +157,21 @@ mod app {
     // #[task(binds = TIM2, local = [count, pwm, pwm_tim], priority = 2)]
     // fn motors(cx: motors::Context) {
     //     rprintln!("TIM TRIGGER");
-    //     if *cx.local.count % 2 == 0 {
-    //         let max_duty = cx.local.pwm.0.get_max_duty();
+    //     // if *cx.local.count % 2 == 0 {
+    //     //     cx.local.pwm.0.set_duty(0);
+    //     //     cx.local.pwm.1.set_duty(0);
+    //     //     cx.local.pwm.2.set_duty(0);
+    //     //     cx.local.pwm.3.set_duty(0);
+    //     //     rprintln!("DUTY ZERO");
+    //     // } else {
+    //         // let max_duty = (1.0 * cx.local.pwm.0.get_max_duty() as f32) as u16;
+    //         let max_duty = u16::MAX;
     //         cx.local.pwm.0.set_duty(max_duty);
     //         cx.local.pwm.1.set_duty(max_duty);
     //         cx.local.pwm.2.set_duty(max_duty);
     //         cx.local.pwm.3.set_duty(max_duty);
     //         rprintln!("DUTY MAX");
-    //     } else {
-    //         cx.local.pwm.0.set_duty(0);
-    //         cx.local.pwm.1.set_duty(0);
-    //         cx.local.pwm.2.set_duty(0);
-    //         cx.local.pwm.3.set_duty(0);
-    //         rprintln!("DUTY ZERO");
-    //     }
+    //     // }
     //     *cx.local.count += 1;
 
     //     cx.local.pwm_tim.clear_update_interrupt_flag();
