@@ -4,8 +4,9 @@ version = "0.1.0"
 edition = "2018"
 
 [dependencies]
-gdnative = "0.9"
-bluetooth-serial-port = "0.6.0"
+# tokio = { version = "1.18.2", features = ["full"] }
+gdnative = "0.10"
+bluetooth-serial-port = { path = "../../../bluetooth-serial-port"}
 hex = "0.4.3"
 
 common = { path = "../common" }

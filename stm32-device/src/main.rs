@@ -8,22 +8,21 @@ use panic_rtt_target as _;
 
 #[rtic::app(device = stm32f1xx_hal::pac, dispatchers = [WWDG])]
 mod app {
-    use nb;
     use nalgebra::Vector3;
-    use rtt_target::{rprintln, rtt_init_print, UpChannel, rprint};
+    use rtt_target::{rprintln, rtt_init_print};
 
     use stm32f1xx_hal::device::USART1;
     use stm32f1xx_hal::dma::CircBuffer;
-    use stm32f1xx_hal::timer::{Tim2NoRemap, Timer, Tim4NoRemap, Event as TEvent, CountDownTimer};
+    use stm32f1xx_hal::timer::{Timer, Tim4NoRemap, CountDownTimer, Event as TEvent};
     use stm32f1xx_hal::{
         gpio::{
-            gpiob::{PB4, PB6, PB7, PB8, PB9, PB10, PB11}, CRH,
-            Alternate, OpenDrain, Pin, PushPull, Output
+            gpiob::{PB10, PB11},
+            Alternate, OpenDrain,
         },
         i2c::{BlockingI2c, DutyCycle, Mode},
-        pac::{I2C2, TIM1, TIM2, TIM3, TIM4},
+        pac::{I2C2, TIM2, TIM4},
         prelude::*,
-        pwm::{C3, Channel, Pwm},
+        pwm::{C1, C2, C3, C4, PwmChannel},
         serial::{Config, Serial, Tx, Event, RxDma1},
     };
 
@@ -31,7 +30,6 @@ mod app {
 
     use crate::spatial::SpatialOrientationDevice;
     use common::{SpatialOrientation, Command};
-    use common::EOT;
     use common::COMMAND_SIZE;
 
     use mpu6050::Mpu6050;
@@ -40,7 +38,12 @@ mod app {
     type MyMono = Systick<100>;
 
     type MPU = Mpu6050<BlockingI2c<I2C2, (PB10<Alternate<OpenDrain>>, PB11<Alternate<OpenDrain>>)>>;
-    type MFR = Pwm<TIM4, Tim4NoRemap, C3, PB8<Alternate<PushPull>>>;
+    type PWM = (
+        PwmChannel<TIM4, C1>,
+        PwmChannel<TIM4, C2>,
+        PwmChannel<TIM4, C3>,
+        PwmChannel<TIM4, C4>,
+    );
 
     #[shared]
     struct Shared {}
@@ -49,10 +52,9 @@ mod app {
     struct Local {
         recv: Option<CircBuffer<[u8; COMMAND_SIZE], RxDma1>>,
         usart1_tx: Tx<USART1>,
-        pwm: MFR,
-        count: u32,
+        pwm: PWM,
         pwm_tim: CountDownTimer<TIM2>,
-        en: PB4<Output<PushPull>>,
+        count: u32,
     }
 
     #[init]
@@ -116,46 +118,57 @@ mod app {
         );
 
         // PWM
-        let (_, _, pb4) = afio.mapr.disable_jtag(gpioa.pa15, gpiob.pb3, gpiob.pb4);
-        let mut en = pb4.into_push_pull_output(&mut gpiob.crl);
-        en.set_low();
-
-        let mot1 = gpiob.pb8.into_alternate_push_pull(&mut gpiob.crh);
-
         let mut pwm_tim = Timer::tim2(dp.TIM2, &clocks)
-            .start_count_down(1.hz());
+                    .start_count_down(1.hz());
         pwm_tim.listen(TEvent::Update);
 
-        let mut pwm = Timer::tim4(dp.TIM4, &clocks).pwm::<Tim4NoRemap, _, _, _>(mot1, &mut afio.mapr, 1.khz());
-        pwm.enable(Channel::C3);
+        let pb6 = gpiob.pb6.into_alternate_push_pull(&mut gpiob.crl);
+        let pb7 = gpiob.pb7.into_alternate_push_pull(&mut gpiob.crl);
+        let pb8 = gpiob.pb8.into_alternate_push_pull(&mut gpiob.crh);
+        let pb9 = gpiob.pb9.into_alternate_push_pull(&mut gpiob.crh);
+
+        let mut pwm = Timer::tim4(dp.TIM4, &clocks).pwm::<Tim4NoRemap, _, _, _>(
+            (pb6, pb7, pb8, pb9), &mut afio.mapr, 200.hz()
+        );
+        let mut channels = pwm.split();
+        channels.0.enable();
+        channels.1.enable();
+        channels.2.enable();
+        channels.3.enable();
 
         //
-        let mpu = Mpu6050::new(i2c2);
-        mpu_init::spawn_after(1.secs(), mpu);
+        // let mpu = Mpu6050::new(i2c2);
+        // mpu_init::spawn_after(1.secs(), mpu);
 
         (
             Shared {},
             Local {
                 recv: Some(rx_transfer),
                 usart1_tx,
-                pwm,
-                count: 0,
+                pwm: channels,
                 pwm_tim,
-                en,
+                count: 0,
             },
             init::Monotonics(mono),
         )
     }
 
+    // testing PWM
     // #[task(binds = TIM2, local = [count, pwm, pwm_tim], priority = 2)]
     // fn motors(cx: motors::Context) {
     //     rprintln!("TIM TRIGGER");
     //     if *cx.local.count % 2 == 0 {
-    //         let max_duty = cx.local.pwm.get_max_duty();
-    //         cx.local.pwm.set_duty(Channel::C3, max_duty);
+    //         let max_duty = cx.local.pwm.0.get_max_duty();
+    //         cx.local.pwm.0.set_duty(max_duty);
+    //         cx.local.pwm.1.set_duty(max_duty);
+    //         cx.local.pwm.2.set_duty(max_duty);
+    //         cx.local.pwm.3.set_duty(max_duty);
     //         rprintln!("DUTY MAX");
     //     } else {
-    //         cx.local.pwm.set_duty(Channel::C3, 0);
+    //         cx.local.pwm.0.set_duty(0);
+    //         cx.local.pwm.1.set_duty(0);
+    //         cx.local.pwm.2.set_duty(0);
+    //         cx.local.pwm.3.set_duty(0);
     //         rprintln!("DUTY ZERO");
     //     }
     //     *cx.local.count += 1;
@@ -190,41 +203,39 @@ mod app {
         s.adjust(raw_gyro - offset, angles);
 
         // rprintln!("{:?}", s);
-        IntoIterator::into_iter(s.to_byte_array()).for_each(|byt| { nb::block!(tx.write(byt)).unwrap() });
-        nb::block!(tx.write(EOT)).unwrap();
+        // IntoIterator::into_iter(s.to_byte_array())
+        //     .for_each(|byt| { nb::block!(tx.write(byt)).unwrap() });
+        // nb::block!(tx.write(EOT)).unwrap();
 
         gyro::spawn_at(spawn_next_at, mpu, offset, s);
     }
 
-    #[task(binds = USART1, local = [recv, pwm, en], priority = 2)]
-    fn on_rx(cx: on_rx::Context) {
-        if let Some(rx) = cx.local.recv.take() {
-            let (buf, mut rx) = rx.stop();
-            let len = (buf[0].len() as u32 * 2) - rx.channel.ch().ndtr.read().bits();
+    // todo: restore
+    // #[task(binds = USART1, local = [recv, pwm], priority = 2)]
+    // fn on_rx(cx: on_rx::Context) {
+    //     if let Some(rx) = cx.local.recv.take() {
+    //         let (buf, mut rx) = rx.stop();
+    //         let len = (buf[0].len() as u32 * 2) - rx.channel.ch().ndtr.read().bits();
 
-            let command = Command::from_byte_slice(&buf[0]);
-            rprintln!("got {:?}", command);
+    //         let command = Command::from_byte_slice(&buf[0]);
+    //         rprintln!("got {:?}", command);
 
-            // todo: find a better way
-            // workaround malformed packet
-            if command.throttle_on {
-                cx.local.en.set_high();
-            } else {
-                cx.local.en.set_low();
-            }
+    //         if command.throttle <= 1.0 && command.throttle >= 0.0 {
+    //             let max_duty = cx.local.pwm.0.get_max_duty();
+    //             // let max_duty: u16 = u16::MAX;
+    //             let duty = (max_duty as f32 * command.throttle) as u16;
+    //             cx.local.pwm.0.set_duty(duty);
+    //             cx.local.pwm.1.set_duty(duty);
+    //             cx.local.pwm.2.set_duty(duty);
+    //             cx.local.pwm.3.set_duty(duty);
+    //             rprintln!("duty {}", duty);
+    //         }
 
-            if command.throttle <= 1.0 && command.throttle >= 0.0 {
-                let max_duty = cx.local.pwm.get_max_duty();
-                let duty = (max_duty as f32 * command.throttle) as u16;
-                cx.local.pwm.set_duty(Channel::C3, duty);
-                rprintln!("duty {}", duty);
-            }
+    //         let (rx, channel) = rx.release();
+    //         rx.clear_idle_interrupt();
+    //         let rx = rx.with_dma(channel);
 
-            let (rx, channel) = rx.release();
-            rx.clear_idle_interrupt();
-            let rx = rx.with_dma(channel);
-
-            cx.local.recv.replace(rx.circ_read(buf));
-        }
-    }
+    //         cx.local.recv.replace(rx.circ_read(buf));
+    //     }
+    // }
 }

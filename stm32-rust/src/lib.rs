@@ -1,6 +1,8 @@
 use bluetooth_serial_port::*;
 use gdnative::prelude::*;
+
 use hex::FromHexError;
+
 use std::io::Read;
 use std::io::Write;
 
@@ -13,20 +15,11 @@ use common::Command;
 pub const CHUNK_SIZE: usize = 16;
 pub const BUF_SIZE: usize = 40;
 
+#[derive(ToVariant)]
 enum Stm32Error {
     BtConnection(String),
     Command(String),
     Misc(String)
-}
-
-impl ToVariant for Stm32Error {
-    fn to_variant(&self) -> Variant {
-        match &self {
-            &Self::BtConnection(e) => Variant::from_str(format!("failed to connect to device: {}", e)),
-            &Self::Command(e) => Variant::from_str(format!("failed sending command {}", e)),
-            &Self::Misc(e) => Variant::from_str(e),
-        }
-    }
 }
 
 impl From<BtError> for Stm32Error {
@@ -36,8 +29,8 @@ impl From<BtError> for Stm32Error {
 }
 
 impl From<FromHexError> for Stm32Error {
-    fn from(_: FromHexError) -> Self {
-        Stm32Error::Misc(format!("malformed hex string"))
+    fn from(e: FromHexError) -> Self {
+        Stm32Error::Misc(format!("malformed hex string {}", e))
     }
 }
 
@@ -51,16 +44,10 @@ pub struct Sensor {
     last_read: (f32, f32, f32),
 }
 
-impl Drop for Sensor {
-    fn drop(&mut self) {
-        todo!()
-    }
-}
-
 #[methods]
 impl Sensor {
     fn new(_owner: &Node) -> Self {
-        Sensor {
+        Self {
             socket: None,
             buf: [0; BUF_SIZE],
             chunk: [0; CHUNK_SIZE],
