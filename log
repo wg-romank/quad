@@ -6,3 +6,8 @@
 - battery showed 3v with multimeter - probably almost discharged
 - unable to check how much current drawn in total, seems multimeter is having a cap of 1a or just above that
 - made a little harness out of thread to do stabilization; pretty fun to fire off the motors
+
+things to try out:
+- fully charge battery & re-do max thrust test
+- order a different battery with more punch
+- could start to implement PID with thread harness already
