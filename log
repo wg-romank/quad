@@ -1,0 +1,8 @@
+31/05/23
+- arrived 5x stm32 boards, swapping board seem to fix previous issues with flashing
+- had a weird issue of gyro task not spawning after switching uart bluetooth pins
+- switched off the board gave it a rest & the issue is not observed anymore
+- tested with 25c battery, seems too weak to lift off, but did hover a little
+- battery showed 3v with multimeter - probably almost discharged
+- unable to check how much current drawn in total, seems multimeter is having a cap of 1a or just above that
+- made a little harness out of thread to do stabilization; pretty fun to fire off the motors
