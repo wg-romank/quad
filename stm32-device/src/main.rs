@@ -14,7 +14,7 @@ mod app {
     use stm32f1xx_hal::device::USART2;
     use stm32f1xx_hal::dma::CircBuffer;
     use stm32f1xx_hal::gpio::{Output, PushPull, CRH};
-    use stm32f1xx_hal::timer::{Timer, Tim4NoRemap, CountDownTimer, Event as TEvent};
+    use stm32f1xx_hal::timer::{Timer, Tim4NoRemap, Event as TEvent};
     use stm32f1xx_hal::{
         gpio::{
             Pin,
@@ -31,9 +31,8 @@ mod app {
     use systick_monotonic::*;
 
     use crate::spatial::{SpatialOrientationDevice, GYRO_FREQUENCY_HZ};
-    use common::{SpatialOrientation, Commands, QuadState};
+    use common::{SpatialOrientation, QuadState};
     use common::COMMANDS_SIZE;
-    use common::Deserialize;
     use common::postcard::from_bytes;
 
 
@@ -54,10 +53,7 @@ mod app {
     #[shared]
     struct Shared {
         state: common::QuadState,
-        offset: Vector3<f32>,
-        s: SpatialOrientation,
-        mpu: MPU,
-        initialised: bool,
+        mpu: Option<(MPU, Vector3<f32>, SpatialOrientation)>
     }
 
     #[local]
@@ -134,6 +130,7 @@ mod app {
         let mut led = gpioc.pc13.into_push_pull_output(&mut gpioc.crh);
         led.set_high();
 
+        // TIMERS
         let mut telemetry_tim = Timer::tim2(dp.TIM2, &clocks)
                     .start_count_down(2.hz());
         telemetry_tim.listen(TEvent::Update);
@@ -158,15 +155,14 @@ mod app {
 
 
         let mpu = Mpu6050::new(i2c2);
-        mpu_init::spawn_after(1.secs());
+        // the issue is that when board is offline i2c delay does not seem to work causing it to fail initialisation
+        // todo: find a good way to handle it with i2c config
+        mpu_init::spawn_after(1.secs(), mpu);
 
         (
             Shared {
                 state: QuadState::default(),
-                offset: Vector3::new(0., 0., 0.),
-                s: SpatialOrientation { pitch: 0., roll: 0. },
-                mpu: mpu,
-                initialised: false
+                mpu: None
             },
             Local {
                 recv: Some(rx_transfer),
@@ -179,14 +175,9 @@ mod app {
         )
     }
 
-    #[task(shared = [mpu, offset, s, initialised])]
-    fn mpu_init(mut cx: mpu_init::Context) {
-        let mpu = cx.shared.mpu;
-        let s = cx.shared.s;
-        let offset = cx.shared.offset;
-        let initialised = cx.shared.initialised;
-
-        (mpu, s, offset, initialised).lock(|mpu, s, o, i| {
+    #[task(shared = [mpu])]
+    fn mpu_init(mut cx: mpu_init::Context, mut mpu: MPU) {
+        cx.shared.mpu.lock(|m| {
             mpu.init().expect("unable to init MPU6050");
             let offset = (0..2000)
                 .flat_map(|_| mpu.get_gyro().ok())
@@ -196,22 +187,17 @@ mod app {
 
             let spatial_orientation = SpatialOrientation::new(angles);
 
-            *s = spatial_orientation;
-            *o = offset;
-            *i = true;
+            *m = Some((mpu, offset, spatial_orientation))
         })
     }
 
-    #[task(binds = TIM3, local = [pwm, led], shared = [mpu, state, offset, s, initialised], priority = 1)]
+    #[task(binds = TIM3, local = [pwm, led], shared = [mpu, state], priority = 1)]
     fn gyro(mut cx: gyro::Context) {
         let mpu = cx.shared.mpu;
-        let s = cx.shared.s;
-        let offset = cx.shared.offset;
-        let initialised = cx.shared.initialised;
         let state = cx.shared.state;
 
-        (mpu, s, offset, initialised, state).lock(|mpu, s, offset, initialised, state| {
-            if *initialised {
+        (mpu, state).lock(|m, state| {
+            if let Some((mpu, offset, s)) = m {
                 let raw_gyro = mpu.get_gyro().expect("unable to get gyro");
                 let angles = mpu.get_acc_angles().expect("unable to get acc angles");
 
