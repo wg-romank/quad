@@ -1,9 +1,5 @@
 #![no_std]
 
-pub const EOT: u8 = 0b11111111;
-pub const COMMAND_SIZE: usize = 5;
-pub const BUFF_SIZE: usize = 8;
-
 #[derive(Debug)]
 pub struct SpatialOrientation {
     pub pitch: f32,
@@ -11,21 +7,44 @@ pub struct SpatialOrientation {
 }
 
 impl SpatialOrientation {
-    pub fn to_byte_array(&self) -> [u8; 8] {
-        let mut result: [u8; 8] = [0; 8];
-        let (one, two) = result.split_at_mut(4);
-        one.copy_from_slice(&self.pitch.to_le_bytes());
-        two.copy_from_slice(&self.roll.to_le_bytes());
-        result
+    fn compute_corrections(&self, desired: SpatialOrientation) -> [f32; 4] {
+        [0., 0., 0., 0.]
     }
+}
 
-    pub fn from_byte_slice(buf: &[u8]) -> SpatialOrientation {
-        let (one, two) = buf.split_at(4);
+#[derive(Debug)]
+pub struct QuadState {
+    pub throttle: f32,
+    pub led: bool,
+    pub stabilisation: bool,
+    pub desired_orientation: SpatialOrientation,
+    // todo:
+    // orientation: SpatialOrientation
+}
 
-        let pitch = f32::from_le_bytes(one.try_into().unwrap());
-        let roll = f32::from_le_bytes(two.try_into().unwrap());
+impl Default for QuadState {
+    fn default() -> Self {
+        Self {
+            throttle: 0.0,
+            led: false,
+            stabilisation: false,
+            desired_orientation: SpatialOrientation { pitch: 0., roll: 0. }
+        }
+    }
+}
 
-        SpatialOrientation { pitch, roll }
+impl QuadState {
+    pub fn update(&mut self, command: Commands) {
+        match command {
+            Commands::Throttle(t) =>
+                self.throttle = t,
+            Commands::Led(on) =>
+                self.led = on,
+            Commands::Stabilisation(on) =>
+                self.stabilisation = on,
+            Commands::Angles(p, r) =>
+                self.desired_orientation = SpatialOrientation { pitch: p, roll: r },
+        }
     }
 }
 
@@ -37,7 +56,8 @@ pub use heapless;
 pub enum Commands {
     Throttle(f32),
     Stabilisation(bool),
-    Led(bool)
+    Led(bool),
+    Angles(f32, f32)
 }
 
 pub const COMMANDS_SIZE: usize = core::mem::size_of::<Commands>();

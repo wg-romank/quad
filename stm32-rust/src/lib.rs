@@ -9,7 +9,6 @@ use std::io::Write;
 use std::ops::Deref;
 use std::panic;
 
-use common::EOT;
 use common::SpatialOrientation;
 use common::Commands;
 
@@ -103,35 +102,35 @@ impl Sensor {
         Ok(())
     }
 
-    #[export]
-    fn get_angles(&mut self, _owner: &Node) -> (f32, f32, f32) {
-        if let Some(s) = &mut self.socket {
-            let read_len = s.read(&mut self.chunk).expect("failed to read from channel");
+    // #[export]
+    // fn get_angles(&mut self, _owner: &Node) -> (f32, f32, f32) {
+    //     if let Some(s) = &mut self.socket {
+    //         let read_len = s.read(&mut self.chunk).expect("failed to read from channel");
 
-            if self.idx + CHUNK_SIZE >= BUF_SIZE {
-                self.idx = 0;
-            }
+    //         if self.idx + CHUNK_SIZE >= BUF_SIZE {
+    //             self.idx = 0;
+    //         }
 
-            self.buf[self.idx..self.idx + CHUNK_SIZE].clone_from_slice(&self.chunk);
-            self.idx += read_len;
+    //         self.buf[self.idx..self.idx + CHUNK_SIZE].clone_from_slice(&self.chunk);
+    //         self.idx += read_len;
 
-            let m = self.buf[..self.idx]
-                .split(|w| *w == EOT )
-                .collect::<Vec<&[u8]>>()
-                .into_iter()
-                .rev()
-                .next();
+    //         let m = self.buf[..self.idx]
+    //             .split(|w| *w == EOT )
+    //             .collect::<Vec<&[u8]>>()
+    //             .into_iter()
+    //             .rev()
+    //             .next();
             
-            if let Some(payload) = m {
-                if payload.len() == common::BUFF_SIZE {
-                    let so = SpatialOrientation::from_byte_slice(payload);
-                    self.last_read = (so.pitch, so.roll, 0.0);
-                }
-            }
-        }
+    //         if let Some(payload) = m {
+    //             if payload.len() == common::BUFF_SIZE {
+    //                 let so = SpatialOrientation::from_byte_slice(payload);
+    //                 self.last_read = (so.pitch, so.roll, 0.0);
+    //             }
+    //         }
+    //     }
 
-        self.last_read
-    }
+    //     self.last_read
+    // }
 }
 
 fn init(handle: InitHandle) {

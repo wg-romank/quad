@@ -6,7 +6,7 @@ mod spatial;
 
 use panic_rtt_target as _;
 
-#[rtic::app(device = stm32f1xx_hal::pac, dispatchers = [WWDG])]
+#[rtic::app(device = stm32f1xx_hal::pac, dispatchers = [WWDG, RTC])]
 mod app {
     use nalgebra::Vector3;
     use rtt_target::{rprintln, rtt_init_print};
@@ -22,7 +22,7 @@ mod app {
             Alternate, OpenDrain,
         },
         i2c::{BlockingI2c, DutyCycle, Mode},
-        pac::{I2C2, TIM2, TIM4},
+        pac::{I2C2, TIM4},
         prelude::*,
         pwm::{C1, C2, C3, C4, PwmChannel},
         serial::{Config, Serial, Tx, Event, RxDma2},
@@ -30,10 +30,12 @@ mod app {
 
     use systick_monotonic::*;
 
-    use crate::spatial::SpatialOrientationDevice;
-    use common::{SpatialOrientation, Commands};
+    use crate::spatial::{SpatialOrientationDevice, GYRO_FREQUENCY_HZ};
+    use common::{SpatialOrientation, Commands, QuadState};
     use common::COMMANDS_SIZE;
     use common::Deserialize;
+    use common::postcard::from_bytes;
+
 
 
     use mpu6050::Mpu6050;
@@ -51,10 +53,11 @@ mod app {
 
     #[shared]
     struct Shared {
-        throttle: f32,
-        led: bool,
-        stabilisation: bool,
-        angles: (f32, f32),
+        state: common::QuadState,
+        offset: Vector3<f32>,
+        s: SpatialOrientation,
+        mpu: MPU,
+        initialised: bool,
     }
 
     #[local]
@@ -63,7 +66,6 @@ mod app {
         usart2_tx: Tx<USART2>,
         pwm: PWM,
         led: Pin<Output<PushPull>, CRH, 'C', 13>,
-        pwm_tim: CountDownTimer<TIM2>,
         count: u32,
     }
 
@@ -129,13 +131,17 @@ mod app {
 
         // LED
         let mut gpioc = dp.GPIOC.split();
-        let led = gpioc.pc13.into_push_pull_output(&mut gpioc.crh);
+        let mut led = gpioc.pc13.into_push_pull_output(&mut gpioc.crh);
+        led.set_high();
+
+        let mut telemetry_tim = Timer::tim2(dp.TIM2, &clocks)
+                    .start_count_down(2.hz());
+        telemetry_tim.listen(TEvent::Update);
+
+        let mut gyro_tim = Timer::tim3(dp.TIM3, &clocks).start_count_down(GYRO_FREQUENCY_HZ.hz());
+        gyro_tim.listen(TEvent::Update);
 
         // PWM
-        let mut pwm_tim = Timer::tim2(dp.TIM2, &clocks)
-                    .start_count_down(200.hz());
-        pwm_tim.listen(TEvent::Update);
-
         let pb6 = gpiob.pb6.into_alternate_push_pull(&mut gpiob.crl);
         let pb7 = gpiob.pb7.into_alternate_push_pull(&mut gpiob.crl);
         let pb8 = gpiob.pb8.into_alternate_push_pull(&mut gpiob.crh);
@@ -152,21 +158,20 @@ mod app {
 
 
         let mpu = Mpu6050::new(i2c2);
-        // todo: figure out priorities
-        // mpu_init::spawn_after(1.secs(), mpu);
+        mpu_init::spawn_after(1.secs());
 
         (
             Shared {
-                throttle: 0.,
-                led: false,
-                stabilisation: false,
-                angles: (0., 0.),
+                state: QuadState::default(),
+                offset: Vector3::new(0., 0., 0.),
+                s: SpatialOrientation { pitch: 0., roll: 0. },
+                mpu: mpu,
+                initialised: false
             },
             Local {
                 recv: Some(rx_transfer),
                 usart2_tx,
                 pwm: channels,
-                pwm_tim,
                 led,
                 count: 0,
             },
@@ -174,107 +179,84 @@ mod app {
         )
     }
 
-    // testing PWM
-    // #[task(binds = TIM2, local = [count, pwm, pwm_tim], priority = 2)]
-    // fn motors(cx: motors::Context) {
-    //     rprintln!("TIM TRIGGER");
-    //     if *cx.local.count % 2 == 0 {
-    //         cx.local.pwm.0.set_duty(0);
-    //         cx.local.pwm.1.set_duty(0);
-    //         cx.local.pwm.2.set_duty(0);
-    //         cx.local.pwm.3.set_duty(0);
-    //         rprintln!("DUTY ZERO");
-    //     } else {
-    //         // let max_duty = (1.0 * cx.local.pwm.0.get_max_duty() as f32) as u16;
-    //         let max_duty = u16::MAX;
-    //         cx.local.pwm.0.set_duty(max_duty);
-    //         cx.local.pwm.1.set_duty(max_duty);
-    //         cx.local.pwm.2.set_duty(max_duty);
-    //         cx.local.pwm.3.set_duty(max_duty);
-    //         rprintln!("DUTY MAX");
-    //     }
-    //     *cx.local.count += 1;
+    #[task(shared = [mpu, offset, s, initialised])]
+    fn mpu_init(mut cx: mpu_init::Context) {
+        let mpu = cx.shared.mpu;
+        let s = cx.shared.s;
+        let offset = cx.shared.offset;
+        let initialised = cx.shared.initialised;
 
-    //     cx.local.pwm_tim.clear_update_interrupt_flag();
-    //     rprintln!("INTERRUPT CLEAR");
-    // }
+        (mpu, s, offset, initialised).lock(|mpu, s, o, i| {
+            mpu.init().expect("unable to init MPU6050");
+            let offset = (0..2000)
+                .flat_map(|_| mpu.get_gyro().ok())
+                .reduce(|l, r| (l + r) / 2.0)
+                .expect("no calibration measurements");
+            let angles = mpu.get_acc_angles().expect("unable to get acc angles");
 
-    #[task]
-    fn mpu_init(_: mpu_init::Context, mut mpu: MPU) {
-        mpu.init().expect("unable to init MPU6050");
+            let spatial_orientation = SpatialOrientation::new(angles);
 
-        let offset = (0..2000)
-            .flat_map(|_| mpu.get_gyro().ok())
-            .reduce(|l, r| (l + r) / 2.0)
-            .expect("no calibration measurements");
-        let angles = mpu.get_acc_angles().expect("unable to get acc angles");
-
-        let spatial_orientation = SpatialOrientation::new(angles);
-
-        gyro::spawn(mpu, offset, spatial_orientation);
+            *s = spatial_orientation;
+            *o = offset;
+            *i = true;
+        })
     }
 
-    #[task(local = [usart2_tx], shared = [angles])]
-    fn gyro(mut cx: gyro::Context, mut mpu: MPU, offset: Vector3<f32>, mut s: SpatialOrientation) {
-        let tx: &mut Tx<USART2> = cx.local.usart2_tx;
-        let spawn_next_at = monotonics::now() + 5000.micros();
+    #[task(binds = TIM3, local = [pwm, led], shared = [mpu, state, offset, s, initialised], priority = 1)]
+    fn gyro(mut cx: gyro::Context) {
+        let mpu = cx.shared.mpu;
+        let s = cx.shared.s;
+        let offset = cx.shared.offset;
+        let initialised = cx.shared.initialised;
+        let state = cx.shared.state;
 
-        let raw_gyro = mpu.get_gyro().expect("unable to get gyro");
-        let angles = mpu.get_acc_angles().expect("unable to get acc angles");
+        (mpu, s, offset, initialised, state).lock(|mpu, s, offset, initialised, state| {
+            if *initialised {
+                let raw_gyro = mpu.get_gyro().expect("unable to get gyro");
+                let angles = mpu.get_acc_angles().expect("unable to get acc angles");
 
-        s.adjust(raw_gyro - offset, angles);
+                s.adjust(raw_gyro - *offset, angles);
+                rprintln!("{:?}", s);
 
-        rprintln!("{:?}", s);
-        gyro::spawn_at(spawn_next_at, mpu, offset, s);
-    }
+                let t = state.throttle;
+                let led_on = state.led;
 
-    // #[task(local = [usart2_tx])]
-    // fn telemetry(cx: gyro::Context) {
-    //     // IntoIterator::into_iter(s.to_byte_array())
-    //     //     .for_each(|byt| { nb::block!(tx.write(byt)).unwrap() });
-    //     // nb::block!(tx.write(EOT)).unwrap();
-    // }
+                let max_duty: u16 = u16::MAX;
+                let duty = (max_duty as f32 * t) as u16;
+                cx.local.pwm.0.set_duty(duty);
+                cx.local.pwm.1.set_duty(duty);
+                cx.local.pwm.2.set_duty(duty);
+                cx.local.pwm.3.set_duty(duty);
 
-    #[task(binds = TIM2, local = [pwm, pwm_tim, led], shared = [throttle, led, stabilisation, angles], priority = 1)]
-    fn control(mut cx: control::Context) {
-        cx.shared.throttle.lock(|t| {
-            let max_duty: u16 = u16::MAX;
-            let duty = (max_duty as f32 * *t) as u16;
-            cx.local.pwm.0.set_duty(duty);
-            cx.local.pwm.1.set_duty(duty);
-            cx.local.pwm.2.set_duty(duty);
-            cx.local.pwm.3.set_duty(duty);
-            rprintln!("duty {}", duty);
-        });
-
-        cx.shared.led.lock(|on| {
-            if *on {
-                cx.local.led.set_low();
-            } else {
-                cx.local.led.set_high();
+                if led_on {
+                    cx.local.led.set_low();
+                } else {
+                    cx.local.led.set_high();
+                }
             }
-
         });
-
-        cx.local.pwm_tim.clear_update_interrupt_flag();
     }
 
-    use common::postcard::from_bytes;
+    #[task(binds = TIM2, local = [usart2_tx], shared = [state], priority = 1)]
+    fn telemetry(mut cx: telemetry::Context) {
+        // todo:
+        // let tx: &mut Tx<USART2> = cx.local.usart2_tx;
+        // IntoIterator::into_iter(s.to_byte_array())
+        //     .for_each(|byt| { nb::block!(tx.write(byt)).unwrap() });
+        // nb::block!(tx.write(EOT)).unwrap();
 
-    #[task(binds = USART2, local = [recv], shared = [throttle, led, stabilisation], priority = 2)]
+        cx.shared.state.lock(|state| {
+            rprintln!("T {:?}", state);
+        });
+    }
+
+    #[task(binds = USART2, local = [recv], shared = [state], priority = 2)]
     fn on_rx(mut cx: on_rx::Context) {
         if let Some(rx) = cx.local.recv.take() {
             let (buf, mut rx) = rx.stop();
 
             if let Ok(command) = from_bytes(&buf[0]) {
-                match command {
-                    Commands::Throttle(t) =>
-                        cx.shared.throttle.lock(|throttle| *throttle = t),
-                    Commands::Led(on) =>
-                        cx.shared.led.lock(|led| *led = on),
-                    Commands::Stabilisation(on) =>
-                        cx.shared.stabilisation.lock(|stab| *stab = on),
-                }
+                cx.shared.state.lock(|state| state.update(command));
             }
 
             let (rx, channel) = rx.release();
