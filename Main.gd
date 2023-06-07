@@ -7,6 +7,7 @@ var connected = false
 
 var throttle_value = 0.0
 var led = false
+var stab = false
 
 func _process(_delta):
 	var t = $Control/GridContainer/HBoxContainer2/Throttle
@@ -25,6 +26,12 @@ func _input(event):
 		if Input.is_action_pressed("ui_cancel"):
 			led = !led
 			result = sensor.led(led)
+			if not result.has("Ok"):
+				print(result.get("Err"))
+		if Input.is_action_pressed("stab"):
+			print("HERE")
+			stab = !stab
+			result = sensor.stab(stab)
 			if not result.has("Ok"):
 				print(result.get("Err"))
 			

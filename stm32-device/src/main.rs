@@ -206,13 +206,19 @@ mod app {
 
                 let t = state.throttle;
                 let led_on = state.led;
+                let stab_on = state.stabilisation;
+
+                let [dx1, dx2, dx3, dx4] = if stab_on {
+                    s.compute_corrections(&state.desired_orientation)
+                } else {
+                    [0., 0., 0., 0.]
+                };
 
                 let max_duty: u16 = u16::MAX;
-                let duty = (max_duty as f32 * t) as u16;
-                cx.local.pwm.0.set_duty(duty);
-                cx.local.pwm.1.set_duty(duty);
-                cx.local.pwm.2.set_duty(duty);
-                cx.local.pwm.3.set_duty(duty);
+                cx.local.pwm.3.set_duty((max_duty as f32 * (t + dx1 * 0.01)) as u16);
+                cx.local.pwm.2.set_duty((max_duty as f32 * (t + dx2 * 0.01)) as u16);
+                cx.local.pwm.1.set_duty((max_duty as f32 * (t + dx3 * 0.01)) as u16);
+                cx.local.pwm.0.set_duty((max_duty as f32 * (t + dx4 * 0.01)) as u16);
 
                 if led_on {
                     cx.local.led.set_low();

@@ -7,8 +7,18 @@ pub struct SpatialOrientation {
 }
 
 impl SpatialOrientation {
-    fn compute_corrections(&self, desired: SpatialOrientation) -> [f32; 4] {
-        [0., 0., 0., 0.]
+    pub fn compute_corrections(&self, desired: &SpatialOrientation) -> [f32; 4] {
+        let e_p = desired.pitch - self.pitch;
+        let e_r = desired.roll - self.roll;
+
+        let delta_x1 = e_p - e_r;
+        let delta_x2 = e_p + e_r;
+        let delta_x3 = -e_p + e_r;
+        let delta_x4 = -e_p - e_r;
+
+        [
+            delta_x1, delta_x2, delta_x3, delta_x4
+        ]
     }
 }
 
