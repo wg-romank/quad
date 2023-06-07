@@ -13,9 +13,11 @@ mod app {
 
     use stm32f1xx_hal::device::USART2;
     use stm32f1xx_hal::dma::CircBuffer;
+    use stm32f1xx_hal::gpio::{Output, PushPull, CRH};
     use stm32f1xx_hal::timer::{Timer, Tim4NoRemap, CountDownTimer, Event as TEvent};
     use stm32f1xx_hal::{
         gpio::{
+            Pin,
             gpiob::{PB10, PB11},
             Alternate, OpenDrain,
         },
@@ -29,8 +31,10 @@ mod app {
     use systick_monotonic::*;
 
     use crate::spatial::SpatialOrientationDevice;
-    use common::{SpatialOrientation, Command};
-    use common::COMMAND_SIZE;
+    use common::{SpatialOrientation, Commands};
+    use common::COMMANDS_SIZE;
+    use common::Deserialize;
+
 
     use mpu6050::Mpu6050;
 
@@ -46,13 +50,19 @@ mod app {
     );
 
     #[shared]
-    struct Shared {}
+    struct Shared {
+        throttle: f32,
+        led: bool,
+        stabilisation: bool,
+        angles: (f32, f32),
+    }
 
     #[local]
     struct Local {
-        recv: Option<CircBuffer<[u8; COMMAND_SIZE], RxDma2>>,
+        recv: Option<CircBuffer<[u8; COMMANDS_SIZE], RxDma2>>,
         usart2_tx: Tx<USART2>,
         pwm: PWM,
+        led: Pin<Output<PushPull>, CRH, 'C', 13>,
         pwm_tim: CountDownTimer<TIM2>,
         count: u32,
     }
@@ -93,7 +103,7 @@ mod app {
         let (usart2_tx, rx) = usart2.split();
         let rrx = rx.with_dma(dma1.6);
 
-        let buf = cortex_m::singleton!(: [[u8; COMMAND_SIZE]; 2] = [[0; COMMAND_SIZE]; 2]).unwrap();
+        let buf = cortex_m::singleton!(: [[u8; COMMANDS_SIZE]; 2] = [[0; COMMANDS_SIZE]; 2]).unwrap();
         let rx_transfer = rrx.circ_read(buf);
 
         // GYRO
@@ -117,9 +127,13 @@ mod app {
             1000,
         );
 
+        // LED
+        let mut gpioc = dp.GPIOC.split();
+        let led = gpioc.pc13.into_push_pull_output(&mut gpioc.crh);
+
         // PWM
         let mut pwm_tim = Timer::tim2(dp.TIM2, &clocks)
-                    .start_count_down(1.hz());
+                    .start_count_down(200.hz());
         pwm_tim.listen(TEvent::Update);
 
         let pb6 = gpiob.pb6.into_alternate_push_pull(&mut gpiob.crl);
@@ -138,15 +152,22 @@ mod app {
 
 
         let mpu = Mpu6050::new(i2c2);
-        mpu_init::spawn_after(1.secs(), mpu);
+        // todo: figure out priorities
+        // mpu_init::spawn_after(1.secs(), mpu);
 
         (
-            Shared {},
+            Shared {
+                throttle: 0.,
+                led: false,
+                stabilisation: false,
+                angles: (0., 0.),
+            },
             Local {
                 recv: Some(rx_transfer),
                 usart2_tx,
                 pwm: channels,
                 pwm_tim,
+                led,
                 count: 0,
             },
             init::Monotonics(mono),
@@ -193,10 +214,10 @@ mod app {
         gyro::spawn(mpu, offset, spatial_orientation);
     }
 
-    #[task(local = [usart2_tx], capacity = 1)]
-    fn gyro(cx: gyro::Context, mut mpu: MPU, offset: Vector3<f32>, mut s: SpatialOrientation) {
+    #[task(local = [usart2_tx], shared = [angles])]
+    fn gyro(mut cx: gyro::Context, mut mpu: MPU, offset: Vector3<f32>, mut s: SpatialOrientation) {
         let tx: &mut Tx<USART2> = cx.local.usart2_tx;
-        let spawn_next_at = monotonics::now() + 4.micros();
+        let spawn_next_at = monotonics::now() + 5000.micros();
 
         let raw_gyro = mpu.get_gyro().expect("unable to get gyro");
         let angles = mpu.get_acc_angles().expect("unable to get acc angles");
@@ -204,31 +225,56 @@ mod app {
         s.adjust(raw_gyro - offset, angles);
 
         rprintln!("{:?}", s);
-        // IntoIterator::into_iter(s.to_byte_array())
-        //     .for_each(|byt| { nb::block!(tx.write(byt)).unwrap() });
-        // nb::block!(tx.write(EOT)).unwrap();
-
         gyro::spawn_at(spawn_next_at, mpu, offset, s);
     }
 
-    // todo: restore
-    #[task(binds = USART2, local = [recv, pwm], priority = 2)]
-    fn on_rx(cx: on_rx::Context) {
+    // #[task(local = [usart2_tx])]
+    // fn telemetry(cx: gyro::Context) {
+    //     // IntoIterator::into_iter(s.to_byte_array())
+    //     //     .for_each(|byt| { nb::block!(tx.write(byt)).unwrap() });
+    //     // nb::block!(tx.write(EOT)).unwrap();
+    // }
+
+    #[task(binds = TIM2, local = [pwm, pwm_tim, led], shared = [throttle, led, stabilisation, angles], priority = 1)]
+    fn control(mut cx: control::Context) {
+        cx.shared.throttle.lock(|t| {
+            let max_duty: u16 = u16::MAX;
+            let duty = (max_duty as f32 * *t) as u16;
+            cx.local.pwm.0.set_duty(duty);
+            cx.local.pwm.1.set_duty(duty);
+            cx.local.pwm.2.set_duty(duty);
+            cx.local.pwm.3.set_duty(duty);
+            rprintln!("duty {}", duty);
+        });
+
+        cx.shared.led.lock(|on| {
+            if *on {
+                cx.local.led.set_low();
+            } else {
+                cx.local.led.set_high();
+            }
+
+        });
+
+        cx.local.pwm_tim.clear_update_interrupt_flag();
+    }
+
+    use common::postcard::from_bytes;
+
+    #[task(binds = USART2, local = [recv], shared = [throttle, led, stabilisation], priority = 2)]
+    fn on_rx(mut cx: on_rx::Context) {
         if let Some(rx) = cx.local.recv.take() {
             let (buf, mut rx) = rx.stop();
-            let len = (buf[0].len() as u32 * 2) - rx.channel.ch().ndtr.read().bits();
 
-            let command = Command::from_byte_slice(&buf[0]);
-            rprintln!("got {:?}", command);
-
-            if command.throttle <= 1.0 && command.throttle >= 0.0 {
-                let max_duty: u16 = u16::MAX;
-                let duty = (max_duty as f32 * command.throttle) as u16;
-                cx.local.pwm.0.set_duty(duty);
-                cx.local.pwm.1.set_duty(duty);
-                cx.local.pwm.2.set_duty(duty);
-                cx.local.pwm.3.set_duty(duty);
-                rprintln!("duty {}", duty);
+            if let Ok(command) = from_bytes(&buf[0]) {
+                match command {
+                    Commands::Throttle(t) =>
+                        cx.shared.throttle.lock(|throttle| *throttle = t),
+                    Commands::Led(on) =>
+                        cx.shared.led.lock(|led| *led = on),
+                    Commands::Stabilisation(on) =>
+                        cx.shared.stabilisation.lock(|stab| *stab = on),
+                }
             }
 
             let (rx, channel) = rx.release();

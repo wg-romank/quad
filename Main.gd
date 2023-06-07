@@ -5,8 +5,8 @@ onready var sensor = Sensor.new()
 
 var connected = false
 
-var throttle_on = false
 var throttle_value = 0.0
+var led = false
 
 func _process(_delta):
 	var t = $Control/GridContainer/HBoxContainer2/Throttle
@@ -15,17 +15,24 @@ func _process(_delta):
 func _input(event):
 	if InputMap.event_is_action(event, "throttle"):
 		throttle_value = event.get_axis_value()
-	throttle_on =  Input.is_action_pressed("throttle_on")
 	
 	var t = $Control/GridContainer/HBoxContainer2/ThrottleOn
-
+			
 	if connected:
-		var result = sensor.send_throttle(throttle_on, throttle_value)
+		t.texture = load("res://assets/connected.png")
+		var result
+		
+		if Input.is_action_pressed("ui_cancel"):
+			led = !led
+			result = sensor.led(led)
+			if not result.has("Ok"):
+				print(result.get("Err"))
+			
+		result = sensor.send_throttle(throttle_value)
 		if not result.has("Ok"):
 			print(result.get("Err"))
-		if throttle_on:
-			t.texture = load("res://assets/connected.png")
-	if not connected or not throttle_on:
+
+	if not connected:
 		t.texture = load("res://assets/disconnected.png")
 
 func _on_Button_button_up():

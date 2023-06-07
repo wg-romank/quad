@@ -29,24 +29,15 @@ impl SpatialOrientation {
     }
 }
 
-#[derive(Debug)]
-pub struct Command {
-    pub throttle_on: bool,
-    pub throttle: f32,
+pub use serde::{Serialize, Deserialize};
+pub use postcard;
+pub use heapless;
+
+#[derive(Serialize, Deserialize)]
+pub enum Commands {
+    Throttle(f32),
+    Stabilisation(bool),
+    Led(bool)
 }
 
-impl Command {
-    pub fn to_byte_array(&self) -> [u8; 5] {
-        let mut result: [u8; 5] = [0; 5];
-        result[0] = self.throttle_on as u8;
-        result[1..].copy_from_slice(&self.throttle.to_le_bytes());
-        result
-    }
-
-    pub fn from_byte_slice(buf: &[u8]) -> Command {
-        let throttle_on = buf[0] != 0;
-        let throttle = f32::from_le_bytes(buf[1..].try_into().unwrap());
-
-        Command { throttle_on, throttle }
-    }
-}
+pub const COMMANDS_SIZE: usize = core::mem::size_of::<Commands>();

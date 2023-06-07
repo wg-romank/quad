@@ -6,11 +6,17 @@ use hex::FromHexError;
 use std::io::Read;
 use std::io::Write;
 
+use std::ops::Deref;
 use std::panic;
 
 use common::EOT;
 use common::SpatialOrientation;
-use common::Command;
+use common::Commands;
+
+use common::postcard::to_vec;
+use common::heapless::Vec as HVec;
+use common::COMMANDS_SIZE;
+
 
 pub const CHUNK_SIZE: usize = 16;
 pub const BUF_SIZE: usize = 40;
@@ -57,13 +63,25 @@ impl Sensor {
     }
 
     #[export]
-    fn send_throttle(&mut self, _owner: &Node, throttle_on: bool, throttle: f32) -> Result<(), Stm32Error> {
-        let command = Command { throttle_on, throttle };
+    fn send_throttle(&mut self, _owner: &Node, throttle: f32) -> Result<(), Stm32Error> {
+        let buf: HVec<u8, COMMANDS_SIZE> = to_vec(&Commands::Throttle(throttle)).unwrap();
         if let Some(s) = &mut self.socket {
-            let buf = command.to_byte_array();
-
             if !s.write(&buf).is_ok() {
                 Err(Stm32Error::Command(format!("throttle")))
+            } else {
+                Ok(())
+            }
+        } else {
+            Err(Stm32Error::BtConnection(format!("not connected")))
+        }
+    }
+
+    #[export]
+    fn led(&mut self, _owner: &Node, led: bool) -> Result<(), Stm32Error> {
+        let buf: HVec<u8, COMMANDS_SIZE> = to_vec(&Commands::Led(led)).unwrap();
+        if let Some(s) = &mut self.socket {
+            if let Err(_) = s.write(&buf.deref()) {
+                Err(Stm32Error::Command(format!("unable to send led")))
             } else {
                 Ok(())
             }
