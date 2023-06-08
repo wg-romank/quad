@@ -2,6 +2,10 @@
 
 Drone in the making
 
+# Project overview
+
+<TODO>
+
 # Hardware
 
 1. Main board - stm32f103c8
