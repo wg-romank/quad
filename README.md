@@ -15,6 +15,10 @@ Drone in the making
 
 Total weight assembled ~ 82g
 
+# Motors & IMU orientation
+
+<TODO>
+
 # Wiring diagram
 
 <img src="resources/wiring.svg">
@@ -23,27 +27,24 @@ Power for bluetooth module and IMU can be connected to main board directly for c
 
 `GNDX` terminals on mosfet driver can be soldered together and connected to `GND` on main board.
 
-Important note is since motors need to spin in opposite directions, interleaving one anonther one needs to pay attention connecting motor wires to mosfet driver.
+Important note is since motors need to spin in opposite directions, one needs to pay attention connecting motor wires to mosfet driver.
 
-Motors polarity described as `+` and `-` and is reversed for 2nd and 4th motor respectively.
+Motors polarity described as `+` and `-` and is reversed for 2nd and 4th motor.
 
 Battery terminals are shared betewen `DC+/-` connections on mosfet driver and `3V/GND` on main board.
 
-# Motors & IMU orientation
-
-<TODO>
-
-# Notes
-
-Some measurements, using 4-channel MOSFET driver (YYNMOS-4), with 1000mah standard battery peak single motor amps are around 0.8. With '25c' battery around 1.4.
-
-Very loose measurements for actual lift around 10g for single motor which is way too low comparing with the internet. e.g. https://www.youtube.com/watch?v=AMWXXCHrHto but could be also due to leverage (only single motor pulling)
-
-Possibly have to change battery/motors or both. Good battery reference seems to be Nanotech (e.g. Nanotech 750mah)
-
-Kingkong 65mm seems to be good fit wiht 8520s [on this rc forum](https://www.rcgroups.com/forums/showthread.php?2811110-Racerstar-8520-coreless-motors-Review-Thrust-Test-(8-5x20mm-brushed-motors)/page2)
-
 # Todos
 
-- [ ] Test the rig current consumption with 2 and 4 motors simultaneously
-- [ ] Figure out how to strap motor on to mosfet driver pcb as frame does not seems to fit it anymore
+- [ ] Test naive stabilisation
+- [ ] Share state types between client and device libraries
+- [ ] Update mission control UI to include state
+- [ ] Check if Tokio or any other runtime can help to buffer telemetry on the client in separate task/thread
+- [ ] Send state telemetry from device
+
+# Potential upgrades
+
+- IMU with mangetometer to correct for yaw drift
+- IR sensor to measure distance to the ground
+  - Upgrade stabilisation to implement "Hover" mode
+- Swap Bluetooth for RC to increase range
+- Downward facing camera to detect position drift
