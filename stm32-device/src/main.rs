@@ -217,8 +217,9 @@ mod app {
                 let max_duty: u16 = u16::MAX;
                 cx.local.pwm.3.set_duty((max_duty as f32 * (t + dx1 * 0.01)) as u16);
                 cx.local.pwm.2.set_duty((max_duty as f32 * (t + dx2 * 0.01)) as u16);
-                cx.local.pwm.1.set_duty((max_duty as f32 * (t + dx3 * 0.01)) as u16);
-                cx.local.pwm.0.set_duty((max_duty as f32 * (t + dx4 * 0.01)) as u16);
+                // todo: fix wiring
+                cx.local.pwm.0.set_duty((max_duty as f32 * (t + dx3 * 0.01)) as u16);
+                cx.local.pwm.1.set_duty((max_duty as f32 * (t + dx4 * 0.01)) as u16);
 
                 if led_on {
                     cx.local.led.set_low();
@@ -237,9 +238,9 @@ mod app {
         //     .for_each(|byt| { nb::block!(tx.write(byt)).unwrap() });
         // nb::block!(tx.write(EOT)).unwrap();
 
-        cx.shared.state.lock(|state| {
-            rprintln!("T {:?}", state);
-        });
+        // cx.shared.state.lock(|state| {
+        //     rprintln!("T {:?}", state);
+        // });
     }
 
     #[task(binds = USART2, local = [recv], shared = [state], priority = 2)]
