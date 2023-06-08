@@ -11,8 +11,8 @@ impl SpatialOrientation {
         // axes swapped
         // pitch goes from - to =
         // roll goes from + to -
-        let e_p = desired.pitch - self.pitch;
-        let e_r = desired.roll - (- self.roll);
+        let e_p = (desired.pitch - self.pitch) / PI;
+        let e_r = (desired.roll - (- self.roll)) / PI;
 
         let delta_x1 = e_p + e_r;
         let delta_x2 = e_p - e_r;
@@ -60,6 +60,8 @@ impl QuadState {
         }
     }
 }
+
+use core::f32::consts::PI;
 
 pub use serde::{Serialize, Deserialize};
 pub use postcard;

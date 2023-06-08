@@ -27,10 +27,10 @@ __meta__ = {
 }
 
 [node name="GridContainer" type="GridContainer" parent="Control"]
-margin_left = 10.0
-margin_top = 10.0
-margin_right = 348.0
-margin_bottom = 587.0
+margin_left = 9.64645
+margin_top = 9.64645
+margin_right = 347.646
+margin_bottom = 586.646
 size_flags_horizontal = 3
 size_flags_vertical = 3
 custom_constants/vseparation = 16
@@ -92,22 +92,12 @@ margin_bottom = 126.0
 
 [node name="Label" type="Label" parent="Control/GridContainer/HBoxContainer2"]
 margin_top = 9.0
-margin_right = 50.0
+margin_right = 78.0
 margin_bottom = 23.0
 size_flags_horizontal = 3
 text = "Throttle"
 __meta__ = {
 "_edit_use_anchors_": false
-}
-
-[node name="ThrottleOn" type="TextureRect" parent="Control/GridContainer/HBoxContainer2"]
-margin_left = 54.0
-margin_right = 78.0
-margin_bottom = 32.0
-rect_min_size = Vector2( 24, 24 )
-texture = ExtResource( 4 )
-__meta__ = {
-"_edit_use_anchors_": true
 }
 
 [node name="Throttle" type="TextureProgress" parent="Control/GridContainer/HBoxContainer2"]

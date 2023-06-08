@@ -214,12 +214,12 @@ mod app {
                     [0., 0., 0., 0.]
                 };
 
-                let max_duty: u16 = u16::MAX;
-                cx.local.pwm.3.set_duty((max_duty as f32 * (t + dx1 * 0.01)) as u16);
-                cx.local.pwm.2.set_duty((max_duty as f32 * (t + dx2 * 0.01)) as u16);
+                let max_duty: f32 = u16::MAX as f32;
+                cx.local.pwm.3.set_duty((max_duty * (t + dx1 * 0.1)) as u16);
+                cx.local.pwm.2.set_duty((max_duty * (t + dx2 * 0.1)) as u16);
                 // todo: fix wiring
-                cx.local.pwm.0.set_duty((max_duty as f32 * (t + dx3 * 0.01)) as u16);
-                cx.local.pwm.1.set_duty((max_duty as f32 * (t + dx4 * 0.01)) as u16);
+                cx.local.pwm.0.set_duty((max_duty * (t + dx3 * 0.1)) as u16);
+                cx.local.pwm.1.set_duty((max_duty * (t + dx4 * 0.1)) as u16);
 
                 if led_on {
                     cx.local.led.set_low();
