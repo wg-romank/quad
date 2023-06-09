@@ -8,6 +8,7 @@ var connected = false
 var throttle_value = 0.0
 var led = false
 var stab = false
+var mode = 0
 
 func _process(_delta):
 	var t = $Control/GridContainer/HBoxContainer2/Throttle
@@ -30,6 +31,11 @@ func _input(event):
 			result = sensor.stab(stab)
 			if not result.has("Ok"):
 				print(result.get("Err"))
+		if Input.is_action_pressed("ui_select"):
+			mode = (mode + 1) % 5
+			result = sensor.mode(mode)
+			if not result.has("Ok"):
+				print(result.get("Err"))	
 			
 		result = sensor.send_throttle(throttle_value)
 		if not result.has("Ok"):

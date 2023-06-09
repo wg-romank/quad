@@ -31,6 +31,7 @@ pub struct QuadState {
     pub led: bool,
     pub stabilisation: bool,
     pub desired_orientation: SpatialOrientation,
+    pub mode: MotorsMode,
     // todo:
     // orientation: SpatialOrientation
 }
@@ -41,7 +42,8 @@ impl Default for QuadState {
             throttle: 0.0,
             led: false,
             stabilisation: false,
-            desired_orientation: SpatialOrientation { pitch: 0., roll: 0. }
+            desired_orientation: SpatialOrientation { pitch: 0., roll: 0. },
+            mode: MotorsMode::All,
         }
     }
 }
@@ -57,6 +59,8 @@ impl QuadState {
                 self.stabilisation = on,
             Commands::Angles(p, r) =>
                 self.desired_orientation = SpatialOrientation { pitch: p, roll: r },
+            Commands::SwitchMode(m) =>
+                self.mode = m,
         }
     }
 }
@@ -67,12 +71,31 @@ pub use serde::{Serialize, Deserialize};
 pub use postcard;
 pub use heapless;
 
+#[derive(Serialize, Deserialize, Debug)]
+pub enum MotorsMode {
+    All, X1, X2, X3, X4
+}
+
+impl From<u32> for  MotorsMode {
+    fn from(v: u32) -> Self {
+        match v {
+            0 => Self::All,
+            1 => Self::X1,
+            2 => Self::X2,
+            3 => Self::X3,
+            4 => Self::X4,
+            _ => panic!("wrong value {}, expected range 0-4", v)
+        }
+    }
+}
+
 #[derive(Serialize, Deserialize)]
 pub enum Commands {
     Throttle(f32),
     Stabilisation(bool),
     Led(bool),
-    Angles(f32, f32)
+    Angles(f32, f32),
+    SwitchMode(MotorsMode)
 }
 
 pub const COMMANDS_SIZE: usize = core::mem::size_of::<Commands>();

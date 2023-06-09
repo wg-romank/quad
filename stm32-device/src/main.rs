@@ -31,7 +31,7 @@ mod app {
     use systick_monotonic::*;
 
     use crate::spatial::{SpatialOrientationDevice, GYRO_FREQUENCY_HZ};
-    use common::{SpatialOrientation, QuadState};
+    use common::{SpatialOrientation, QuadState, MotorsMode};
     use common::COMMANDS_SIZE;
     use common::postcard::from_bytes;
 
@@ -206,6 +206,7 @@ mod app {
 
                 let t = state.throttle;
                 let led_on = state.led;
+                let mode = &state.mode;
                 let stab_on = state.stabilisation;
 
                 let [dx1, dx2, dx3, dx4] = if stab_on {
@@ -215,11 +216,22 @@ mod app {
                 };
 
                 let max_duty: f32 = u16::MAX as f32;
-                cx.local.pwm.3.set_duty((max_duty * (t + dx1 * 0.1)) as u16);
-                cx.local.pwm.2.set_duty((max_duty * (t + dx2 * 0.1)) as u16);
-                // todo: fix wiring
-                cx.local.pwm.0.set_duty((max_duty * (t + dx3 * 0.1)) as u16);
-                cx.local.pwm.1.set_duty((max_duty * (t + dx4 * 0.1)) as u16);
+                match mode {
+                    MotorsMode::All => {
+                        cx.local.pwm.3.set_duty((max_duty * (t + dx1)) as u16);
+                        cx.local.pwm.2.set_duty((max_duty * (t + dx2)) as u16);
+                        cx.local.pwm.1.set_duty((max_duty * (t + dx3)) as u16);
+                        cx.local.pwm.0.set_duty((max_duty * (t + dx4)) as u16);
+                    },
+                    MotorsMode::X1 =>
+                        cx.local.pwm.3.set_duty((max_duty * (t + dx1)) as u16),
+                    MotorsMode::X2 =>
+                        cx.local.pwm.2.set_duty((max_duty * (t + dx2)) as u16),
+                    MotorsMode::X3 =>
+                        cx.local.pwm.1.set_duty((max_duty * (t + dx3)) as u16),
+                    MotorsMode::X4 =>
+                        cx.local.pwm.0.set_duty((max_duty * (t + dx4)) as u16),
+                }
 
                 if led_on {
                     cx.local.led.set_low();

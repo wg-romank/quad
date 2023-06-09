@@ -104,6 +104,20 @@ impl Sensor {
     }
 
     #[export]
+    fn mode(&mut self, _owner: &Node, mode: u32) -> Result<(), Stm32Error> {
+        let buf: HVec<u8, COMMANDS_SIZE> = to_vec(&Commands::SwitchMode(mode.into())).unwrap();
+        if let Some(s) = &mut self.socket {
+            if let Err(_) = s.write(&buf.deref()) {
+                Err(Stm32Error::Command(format!("unable to send led")))
+            } else {
+                Ok(())
+            }
+        } else {
+            Err(Stm32Error::BtConnection(format!("not connected")))
+        }
+    }
+
+    #[export]
     fn connect(&mut self, _owner: &Node, sensor_mac: String) -> Result<(), Stm32Error> {
         let mac_raw = hex::decode(sensor_mac)?;
         let mut mac: [u8; 6] = [0; 6];
