@@ -1,4 +1,4 @@
-# stm32-quad
+# quad
 
 Drone in the making
 
