@@ -60,3 +60,4 @@ Battery terminals are shared betewen `DC+/-` connections on mosfet driver and `3
   - Upgrade stabilisation to implement "Hover" mode
 - Swap Bluetooth for RC to increase range
 - Downward facing camera to detect position drift
+- Toroidal propeller to improve noise / efficiency?
