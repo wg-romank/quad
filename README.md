@@ -4,7 +4,15 @@ Drone in the making
 
 # Project overview
 
-<TODO>
+Project is split in 3 crates as well as Godot project.
+
+`flight-controller` targets stm32f103 boards and includes logic handling pwm signals for motor control, IMU, bluetooth communication via UART.
+
+`client-util` targets PC and mainly provides helper functions for communication via Bluetooth with RFCOMM.
+
+`common` is a holds shared functionality between above crates and includes types describing message format for communication between stm32 device and host.
+
+Godot is mainly used as a tool to build interactive UI serving as mission control for the drone.
 
 # Hardware
 
