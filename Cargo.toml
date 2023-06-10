@@ -1,2 +1,2 @@
 [workspace]
-members = ["stm32-rust", "stm32-device"]
+members = ["client-util", "flight-controller"]

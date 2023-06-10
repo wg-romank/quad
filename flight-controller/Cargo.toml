@@ -1,5 +1,5 @@
 [package]
-name = "stm32-device"
+name = "flight-controller"
 version = "0.1.0"
 authors = ["Roman Kotelnikov <roman.kotelnikov@outlook.com>"]
 description = "Scraps of code to work with mpu 6050"
@@ -25,7 +25,7 @@ version = "0.8.0"
 features = ["rt", "stm32f103", "medium"]
 
 [[bin]]
-name = "stm32-device"
+name = "flight-controller"
 test = false
 bench = false
 
