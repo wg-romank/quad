@@ -11,7 +11,7 @@ var stab = false
 var mode = 0
 
 func _process(_delta):
-	var t = $Control/GridContainer/HBoxContainer2/Throttle
+	var t = $Control/MissionControl/Throttle/Value
 	t.value = throttle_value * t.max_value
 
 func _input(event):
@@ -42,10 +42,10 @@ func _input(event):
 			print(result.get("Err"))
 
 func _on_Button_button_up():
-	var sensor_mac = $Control/GridContainer/HBoxContainer/MAC.text
+	var sensor_mac = $Control/MissionControl/Connection/MAC.text
 	var response = sensor.connect(sensor_mac)
 	if response.has("Ok"):
 		connected = true
-		$Control/GridContainer/HBoxContainer/ConnectionStatus.texture = load("res://assets/connected.png")
+		$Control/MissionControl/Connection/ConnectionStatus.texture = load("res://assets/connected.png")
 	else:
 		print(response.get("Err"))
