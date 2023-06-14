@@ -3,7 +3,7 @@ use nalgebra::Vector3;
 
 use common::SpatialOrientation;
 
-pub const GYRO_FREQUENCY_HZ: u32 = 250;
+pub const GYRO_FREQUENCY_HZ: u32 = 50;
 pub const GYRO_DT: f32 = 1.0 / GYRO_FREQUENCY_HZ as f32;
 
 pub trait SpatialOrientationDevice {

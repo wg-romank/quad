@@ -223,14 +223,30 @@ mod app {
                         cx.local.pwm.1.set_duty((max_duty * (t + dx3)) as u16);
                         cx.local.pwm.0.set_duty((max_duty * (t + dx4)) as u16);
                     },
-                    MotorsMode::X1 =>
-                        cx.local.pwm.3.set_duty((max_duty * (t + dx1)) as u16),
-                    MotorsMode::X2 =>
-                        cx.local.pwm.2.set_duty((max_duty * (t + dx2)) as u16),
-                    MotorsMode::X3 =>
-                        cx.local.pwm.1.set_duty((max_duty * (t + dx3)) as u16),
-                    MotorsMode::X4 =>
-                        cx.local.pwm.0.set_duty((max_duty * (t + dx4)) as u16),
+                    MotorsMode::X1 => {
+                        cx.local.pwm.3.set_duty((max_duty * (t + dx1)) as u16);
+                        cx.local.pwm.2.set_duty(0);
+                        cx.local.pwm.1.set_duty(0);
+                        cx.local.pwm.0.set_duty(0);
+                    },
+                    MotorsMode::X2 => {
+                        cx.local.pwm.3.set_duty(0);
+                        cx.local.pwm.2.set_duty((max_duty * (t + dx2)) as u16);
+                        cx.local.pwm.1.set_duty(0);
+                        cx.local.pwm.0.set_duty(0);
+                    },
+                    MotorsMode::X3 => {
+                        cx.local.pwm.3.set_duty(0);
+                        cx.local.pwm.2.set_duty(0);
+                        cx.local.pwm.1.set_duty((max_duty * (t + dx3)) as u16);
+                        cx.local.pwm.0.set_duty(0);
+                    },
+                    MotorsMode::X4 => {
+                        cx.local.pwm.3.set_duty(0);
+                        cx.local.pwm.2.set_duty(0);
+                        cx.local.pwm.1.set_duty(0);
+                        cx.local.pwm.0.set_duty((max_duty * (t + dx4)) as u16);
+                    }
                 }
 
                 if led_on {
