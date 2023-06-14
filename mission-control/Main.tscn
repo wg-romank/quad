@@ -54,7 +54,8 @@ margin_top = 8.0
 margin_right = 167.0
 margin_bottom = 22.0
 size_flags_horizontal = 3
-text = "Device ID"
+text = "MAC"
+align = 1
 __meta__ = {
 "_edit_use_anchors_": false
 }
@@ -90,6 +91,7 @@ margin_right = 78.0
 margin_bottom = 23.0
 size_flags_horizontal = 3
 text = "Throttle"
+align = 1
 __meta__ = {
 "_edit_use_anchors_": false
 }
@@ -109,6 +111,7 @@ margin_top = 142.0
 margin_right = 338.0
 margin_bottom = 166.0
 text = "Stabilisation"
+align = 1
 
 [node name="ThrottleMode" type="Control" parent="Control/MissionControl"]
 margin_top = 182.0

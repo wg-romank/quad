@@ -72,8 +72,8 @@ func _on_X4_button_up():
 	mode = 4
 	send_mode(4)
 
-func send_mode(mode):
+func send_mode(m):
 	if connected:
-		var result = sensor.mode(mode)
+		var result = sensor.mode(m)
 		if not result.has("Ok"):
 			print(result.get("Err"))
