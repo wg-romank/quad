@@ -43,3 +43,18 @@ todo:
 - get a new battery and check current for all motors in single mode (possible with limiting current on mutlimeter?)
 - motor can stuck in 'on' mode even when not enabled (parasitic capacitance?)
   - turning motor on again seems to unstuck them (could be solved when undamaged battery is installed?)
+  
+
+14/06/23
+========
+- crashed drone while testing power output with fresh and fully charged battery
+- one of props is slighly bent
+- doulbe check & triple-check the battery connection when charging
+- some issues found with sending commands to quad, probably this is causing motors to keep spinning and other stuff
+- uneven power improves when graudally increasing throttle, probably control task is running at too high frequency so mosfet driver does not have enough time to respond
+- re-watched talk on flight controller stabilisation, missing part is PI controller for rate of change for gyros, not just angles
+
+todos:
+- improve communication to limit number of messages sent and ensure commands do not clog the queue
+- reduce control frequency, possibly split gyro into separate task to do median filtering on acc with high frequency
+- implement heartbeat & throttle cutoff for safety
