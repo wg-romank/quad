@@ -164,7 +164,7 @@ margin_right = 157.0
 margin_bottom = 30.0
 text = "X4"
 
-[node name="Timer" type="Timer" parent="."]
+[node name="ControlTimer" type="Timer" parent="."]
 wait_time = 0.2
 autostart = true
 [connection signal="button_up" from="Control/MissionControl/Connect" to="." method="_on_Button_button_up"]
@@ -173,4 +173,4 @@ autostart = true
 [connection signal="button_up" from="Control/MissionControl/ThrottleMode/Mode/X2" to="." method="_on_X2_button_up"]
 [connection signal="button_up" from="Control/MissionControl/ThrottleMode/Mode/X3" to="." method="_on_X3_button_up"]
 [connection signal="button_up" from="Control/MissionControl/ThrottleMode/Mode/X4" to="." method="_on_X4_button_up"]
-[connection signal="timeout" from="Timer" to="." method="_on_Timer_timeout"]
+[connection signal="timeout" from="ControlTimer" to="." method="_on_Timer_timeout"]

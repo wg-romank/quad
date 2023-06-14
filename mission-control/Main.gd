@@ -33,9 +33,7 @@ func _input(event):
 			print(result.get("Err"))
 	if Input.is_action_pressed("ui_select"):
 		mode = (mode + 1) % 5
-		result = sensor.mode(mode)
-		if not result.has("Ok"):
-			print(result.get("Err"))
+		send_mode(mode)
 
 func _on_Button_button_up():
 	var sensor_mac = $Control/MissionControl/Connection/MAC.text
@@ -53,41 +51,28 @@ func _on_Timer_timeout():
 		if not result.has("Ok"):
 			print(result.get("Err"))
 
-
 func _on_All_button_up():
 	mode = 0
-	if connected:
-		var result = sensor.mode(mode)
-		if not result.has("Ok"):
-			print(result.get("Err"))
-
+	send_mode(mode)
 
 func _on_X1_button_up():
 	mode = 1
-	if connected:
-		var result = sensor.mode(mode)
-		if not result.has("Ok"):
-			print(result.get("Err"))
+	send_mode(mode)
 
 
 func _on_X2_button_up():
 	mode = 2
-	if connected:
-		var result = sensor.mode(mode)
-		if not result.has("Ok"):
-			print(result.get("Err"))
-
+	send_mode(mode)
 
 func _on_X3_button_up():
 	mode = 3
-	if connected:
-		var result = sensor.mode(mode)
-		if not result.has("Ok"):
-			print(result.get("Err"))
-
+	send_mode(3)
 
 func _on_X4_button_up():
 	mode = 4
+	send_mode(4)
+
+func send_mode(mode):
 	if connected:
 		var result = sensor.mode(mode)
 		if not result.has("Ok"):
