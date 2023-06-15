@@ -1,4 +1,4 @@
-#![no_std]
+#![cfg_attr(not(feature = "godot"), no_std)]
 
 #[derive(Debug)]
 pub struct SpatialOrientation {
@@ -73,6 +73,10 @@ pub use heapless;
 #[cfg(feature = "godot")]
 pub use gdnative;
 
+#[cfg(feature = "godot")]
+use std::any;
+
+#[cfg(feature = "no_std")]
 use heapless::pool::Box;
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -96,7 +100,7 @@ impl From<u32> for  MotorsMode {
 
 
 #[derive(Serialize, Deserialize)]
-#[cfg_attr(feature = "godot", derive(gdnative::prelude::ToVariant))]
+#[cfg_attr(feature = "godot", derive(gdnative::prelude::ToVariant, gdnative::prelude::FromVariant))]
 pub enum Commands {
     Throttle(f32),
     Stabilisation(bool),
