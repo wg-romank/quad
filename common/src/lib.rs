@@ -72,15 +72,11 @@ pub use postcard;
 pub use heapless;
 #[cfg(feature = "godot")]
 pub use gdnative;
-
 #[cfg(feature = "godot")]
-use std::any;
-
-#[cfg(feature = "no_std")]
-use heapless::pool::Box;
+use gdnative::prelude::{ToVariant, FromVariant};
 
 #[derive(Serialize, Deserialize, Debug)]
-#[cfg_attr(feature = "godot", derive(gdnative::prelude::ToVariant, gdnative::prelude::FromVariant))]
+#[cfg_attr(feature = "godot", derive(ToVariant, FromVariant))]
 pub enum MotorsMode {
     All, X1, X2, X3, X4
 }
@@ -100,7 +96,7 @@ impl From<u32> for  MotorsMode {
 
 
 #[derive(Serialize, Deserialize)]
-#[cfg_attr(feature = "godot", derive(gdnative::prelude::ToVariant, gdnative::prelude::FromVariant))]
+#[cfg_attr(feature = "godot", derive(ToVariant, FromVariant))]
 pub enum Commands {
     Throttle(f32),
     Stabilisation(bool),
