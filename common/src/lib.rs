@@ -70,8 +70,13 @@ use core::f32::consts::PI;
 pub use serde::{Serialize, Deserialize};
 pub use postcard;
 pub use heapless;
+#[cfg(feature = "godot")]
+pub use gdnative;
+
+use heapless::pool::Box;
 
 #[derive(Serialize, Deserialize, Debug)]
+#[cfg_attr(feature = "godot", derive(gdnative::prelude::ToVariant, gdnative::prelude::FromVariant))]
 pub enum MotorsMode {
     All, X1, X2, X3, X4
 }
@@ -89,7 +94,9 @@ impl From<u32> for  MotorsMode {
     }
 }
 
+
 #[derive(Serialize, Deserialize)]
+#[cfg_attr(feature = "godot", derive(gdnative::prelude::ToVariant))]
 pub enum Commands {
     Throttle(f32),
     Stabilisation(bool),

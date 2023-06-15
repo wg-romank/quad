@@ -43,7 +43,6 @@ todo:
 - get a new battery and check current for all motors in single mode (possible with limiting current on mutlimeter?)
 - motor can stuck in 'on' mode even when not enabled (parasitic capacitance?)
   - turning motor on again seems to unstuck them (could be solved when undamaged battery is installed?)
-  
 
 14/06/23
 ========

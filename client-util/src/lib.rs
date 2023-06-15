@@ -62,6 +62,11 @@ impl Sensor {
     }
 
     #[export]
+    fn send_command(&mut self, _owner: &Node, command: Commands) -> Result<(), Stm32Error> {
+        todo!()
+    }
+
+    #[export]
     fn send_throttle(&mut self, _owner: &Node, throttle: f32) -> Result<(), Stm32Error> {
         let buf: HVec<u8, COMMANDS_SIZE> = to_vec(&Commands::Throttle(throttle)).unwrap();
         if let Some(s) = &mut self.socket {

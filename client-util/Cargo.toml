@@ -9,7 +9,7 @@ gdnative = "0.10"
 bluetooth-serial-port = { path = "../../../bluetooth-serial-port"}
 hex = "0.4.3"
 
-common = { path = "../common" }
+common = { path = "../common", features = ["godot"] }
 
 
 [lib]
