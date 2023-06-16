@@ -1,9 +1,12 @@
 use bluetooth_serial_port::*;
+use common::QuadState;
+use common::postcard::from_bytes;
 use gdnative::prelude::*;
 
 use hex::FromHexError;
 
 use std::io::Write;
+use std::io::Read;
 
 use std::panic;
 
@@ -48,10 +51,7 @@ impl From<PostcardError> for Stm32Error {
 #[inherit(Node)]
 pub struct Sensor {
     socket: Option<BtSocket>,
-    // buf: [u8; BUF_SIZE],
-    // chunk: [u8; CHUNK_SIZE],
-    // idx: usize,
-    // last_read: (f32, f32, f32),
+    buf: [u8; 30],
 }
 
 #[methods]
@@ -59,10 +59,7 @@ impl Sensor {
     fn new(_owner: &Node) -> Self {
         Self {
             socket: None,
-            // buf: [0; BUF_SIZE],
-            // chunk: [0; CHUNK_SIZE],
-            // idx: 0,
-            // last_read: (0.0, 0.0, 0.0),
+            buf: [0; 30],
         }
     }
 
@@ -90,35 +87,16 @@ impl Sensor {
         Ok(())
     }
 
-    // #[export]
-    // fn get_angles(&mut self, _owner: &Node) -> (f32, f32, f32) {
-    //     if let Some(s) = &mut self.socket {
-    //         let read_len = s.read(&mut self.chunk).expect("failed to read from channel");
-
-    //         if self.idx + CHUNK_SIZE >= BUF_SIZE {
-    //             self.idx = 0;
-    //         }
-
-    //         self.buf[self.idx..self.idx + CHUNK_SIZE].clone_from_slice(&self.chunk);
-    //         self.idx += read_len;
-
-    //         let m = self.buf[..self.idx]
-    //             .split(|w| *w == EOT )
-    //             .collect::<Vec<&[u8]>>()
-    //             .into_iter()
-    //             .rev()
-    //             .next();
-            
-    //         if let Some(payload) = m {
-    //             if payload.len() == common::BUFF_SIZE {
-    //                 let so = SpatialOrientation::from_byte_slice(payload);
-    //                 self.last_read = (so.pitch, so.roll, 0.0);
-    //             }
-    //         }
-    //     }
-
-    //     self.last_read
-    // }
+    #[export]
+    fn get_angles(&mut self, _owner: &Node) -> Option<QuadState> {
+        if let Some(s) = &mut self.socket {
+            let read_len = s.read_exact(&mut self.buf).expect("failed to read from channel");
+            let res: common::QuadState = from_bytes(&self.buf).expect("failed to deserialize");
+            Some(res)
+        } else {
+            None
+        }
+    }
 }
 
 fn init(handle: InitHandle) {

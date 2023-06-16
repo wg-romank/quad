@@ -76,3 +76,14 @@ func send_command(command: Dictionary):
 		var result: Dictionary = sensor.send_command(command)
 		if not result.has("Ok"):
 			print(result.get("Err"))
+
+
+func _on_TelemetryTimer_timeout():
+	pass
+	#if connected:
+	#	print(sensor.get_angles())
+
+
+func _on_GetAngles_button_up():
+	if connected:
+		print(sensor.get_angles())

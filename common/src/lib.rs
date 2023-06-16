@@ -1,6 +1,15 @@
 #![cfg_attr(not(feature = "godot"), no_std)]
+#[cfg(feature = "godot")]
+pub use gdnative;
+#[cfg(feature = "godot")]
+use gdnative::prelude::{ToVariant, FromVariant};
 
-#[derive(Debug)]
+pub use serde::{Serialize, Deserialize};
+pub use postcard;
+pub use heapless;
+
+#[derive(Debug, Serialize, Deserialize)]
+#[cfg_attr(feature = "godot", derive(ToVariant, FromVariant))]
 pub struct SpatialOrientation {
     pub pitch: f32,
     pub roll: f32,
@@ -25,7 +34,8 @@ impl SpatialOrientation {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
+#[cfg_attr(feature = "godot", derive(ToVariant, FromVariant))]
 pub struct QuadState {
     pub throttle: f32,
     pub led: bool,
@@ -66,15 +76,6 @@ impl QuadState {
 }
 
 use core::f32::consts::PI;
-
-pub use serde::{Serialize, Deserialize};
-pub use postcard;
-pub use heapless;
-
-#[cfg(feature = "godot")]
-pub use gdnative;
-#[cfg(feature = "godot")]
-use gdnative::prelude::{ToVariant, FromVariant};
 
 #[derive(Serialize, Deserialize, Debug)]
 #[cfg_attr(feature = "godot", derive(ToVariant, FromVariant))]
