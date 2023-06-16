@@ -7,6 +7,11 @@ edition = "2021"
 postcard = "1.0.4"
 serde = { version = "1.0.*", default_features = false }
 heapless = "*"
+gdnative = { version = "0.10", optional = true }
+
+[features]
+default = []
+godot = ["dep:gdnative"]
 
 
 [lib]

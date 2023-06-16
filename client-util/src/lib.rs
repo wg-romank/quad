@@ -3,16 +3,14 @@ use gdnative::prelude::*;
 
 use hex::FromHexError;
 
-use std::io::Read;
 use std::io::Write;
 
-use std::ops::Deref;
 use std::panic;
 
-use common::SpatialOrientation;
 use common::Commands;
 
 use common::postcard::to_vec;
+use common::postcard::Error as PostcardError;
 use common::heapless::Vec as HVec;
 use common::COMMANDS_SIZE;
 
@@ -24,6 +22,7 @@ pub const BUF_SIZE: usize = 40;
 enum Stm32Error {
     BtConnection(String),
     Command(String),
+    SerialisationError(String),
     Misc(String)
 }
 
@@ -39,14 +38,20 @@ impl From<FromHexError> for Stm32Error {
     }
 }
 
+impl From<PostcardError> for Stm32Error {
+    fn from(e: PostcardError) -> Self {
+        Self::SerialisationError(format!("PostcardError: {:?}", e))
+    }
+}
+
 #[derive(NativeClass)]
 #[inherit(Node)]
 pub struct Sensor {
     socket: Option<BtSocket>,
-    buf: [u8; BUF_SIZE],
-    chunk: [u8; CHUNK_SIZE],
-    idx: usize,
-    last_read: (f32, f32, f32),
+    // buf: [u8; BUF_SIZE],
+    // chunk: [u8; CHUNK_SIZE],
+    // idx: usize,
+    // last_read: (f32, f32, f32),
 }
 
 #[methods]
@@ -54,64 +59,19 @@ impl Sensor {
     fn new(_owner: &Node) -> Self {
         Self {
             socket: None,
-            buf: [0; BUF_SIZE],
-            chunk: [0; CHUNK_SIZE],
-            idx: 0,
-            last_read: (0.0, 0.0, 0.0),
+            // buf: [0; BUF_SIZE],
+            // chunk: [0; CHUNK_SIZE],
+            // idx: 0,
+            // last_read: (0.0, 0.0, 0.0),
         }
     }
 
     #[export]
-    fn send_throttle(&mut self, _owner: &Node, throttle: f32) -> Result<(), Stm32Error> {
-        let buf: HVec<u8, COMMANDS_SIZE> = to_vec(&Commands::Throttle(throttle)).unwrap();
+    fn send_command(&mut self, _owner: &Node, command: Commands) -> Result<usize, Stm32Error> {
+        let buf: HVec<u8, COMMANDS_SIZE> = to_vec(&command)?;
         if let Some(s) = &mut self.socket {
-            if !s.write(&buf).is_ok() {
-                Err(Stm32Error::Command(format!("throttle")))
-            } else {
-                Ok(())
-            }
-        } else {
-            Err(Stm32Error::BtConnection(format!("not connected")))
-        }
-    }
-
-    #[export]
-    fn led(&mut self, _owner: &Node, led: bool) -> Result<(), Stm32Error> {
-        let buf: HVec<u8, COMMANDS_SIZE> = to_vec(&Commands::Led(led)).unwrap();
-        if let Some(s) = &mut self.socket {
-            if let Err(_) = s.write(&buf.deref()) {
-                Err(Stm32Error::Command(format!("unable to send led")))
-            } else {
-                Ok(())
-            }
-        } else {
-            Err(Stm32Error::BtConnection(format!("not connected")))
-        }
-    }
-
-    #[export]
-    fn stab(&mut self, _owner: &Node, stab: bool) -> Result<(), Stm32Error> {
-        let buf: HVec<u8, COMMANDS_SIZE> = to_vec(&Commands::Stabilisation(stab)).unwrap();
-        if let Some(s) = &mut self.socket {
-            if let Err(_) = s.write(&buf.deref()) {
-                Err(Stm32Error::Command(format!("unable to send led")))
-            } else {
-                Ok(())
-            }
-        } else {
-            Err(Stm32Error::BtConnection(format!("not connected")))
-        }
-    }
-
-    #[export]
-    fn mode(&mut self, _owner: &Node, mode: u32) -> Result<(), Stm32Error> {
-        let buf: HVec<u8, COMMANDS_SIZE> = to_vec(&Commands::SwitchMode(mode.into())).unwrap();
-        if let Some(s) = &mut self.socket {
-            if let Err(_) = s.write(&buf.deref()) {
-                Err(Stm32Error::Command(format!("unable to send led")))
-            } else {
-                Ok(())
-            }
+            s.write(&buf)
+                .map_err(|e| Stm32Error::Command(e.to_string()))
         } else {
             Err(Stm32Error::BtConnection(format!("not connected")))
         }
