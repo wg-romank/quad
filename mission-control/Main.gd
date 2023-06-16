@@ -23,7 +23,6 @@ func _process(_delta):
 	var s = $Control/MissionControl/Stabilisation
 	s.pressed = stab
 
-
 func _input(event):
 	if InputMap.event_is_action(event, "throttle"):
 		throttle_value = event.get_axis_value()
@@ -47,8 +46,7 @@ func _on_Button_button_up():
 		print(response.get("Err"))
 
 func _on_Timer_timeout():
-	if connected:
-		send_command({"Throttle": throttle_value})
+	send_command({"Throttle": throttle_value})
 
 func _on_All_button_up():
 	mode = 0
