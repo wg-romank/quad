@@ -113,73 +113,74 @@ margin_bottom = 166.0
 text = "Stabilisation"
 align = 1
 
-[node name="ThrottleMode" type="Control" parent="Control/MissionControl"]
+[node name="Label" type="Label" parent="Control/MissionControl"]
 margin_top = 182.0
 margin_right = 338.0
-margin_bottom = 182.0
-__meta__ = {
-"_edit_use_anchors_": false
-}
-
-[node name="Label" type="Label" parent="Control/MissionControl/ThrottleMode"]
-margin_top = 16.0
-margin_right = 338.0
-margin_bottom = 30.0
+margin_bottom = 196.0
 text = "Throttle Mode"
 __meta__ = {
 "_edit_use_anchors_": false
 }
 
-[node name="Mode" type="HBoxContainer" parent="Control/MissionControl/ThrottleMode"]
-margin_top = 46.0
+[node name="Mode" type="HBoxContainer" parent="Control/MissionControl"]
+margin_top = 212.0
 margin_right = 338.0
-margin_bottom = 76.0
+margin_bottom = 232.0
 __meta__ = {
 "_edit_use_anchors_": false
 }
 
-[node name="All" type="Button" parent="Control/MissionControl/ThrottleMode/Mode"]
+[node name="All" type="Button" parent="Control/MissionControl/Mode"]
 margin_right = 29.0
-margin_bottom = 30.0
+margin_bottom = 20.0
 text = "All"
 
-[node name="X1" type="Button" parent="Control/MissionControl/ThrottleMode/Mode"]
+[node name="X1" type="Button" parent="Control/MissionControl/Mode"]
 margin_left = 33.0
 margin_right = 61.0
-margin_bottom = 30.0
+margin_bottom = 20.0
 text = "X1"
 
-[node name="X2" type="Button" parent="Control/MissionControl/ThrottleMode/Mode"]
+[node name="X2" type="Button" parent="Control/MissionControl/Mode"]
 margin_left = 65.0
 margin_right = 93.0
-margin_bottom = 30.0
+margin_bottom = 20.0
 text = "X2"
 
-[node name="X3" type="Button" parent="Control/MissionControl/ThrottleMode/Mode"]
+[node name="X3" type="Button" parent="Control/MissionControl/Mode"]
 margin_left = 97.0
 margin_right = 125.0
-margin_bottom = 30.0
+margin_bottom = 20.0
 text = "X3"
 
-[node name="X4" type="Button" parent="Control/MissionControl/ThrottleMode/Mode"]
+[node name="X4" type="Button" parent="Control/MissionControl/Mode"]
 margin_left = 129.0
 margin_right = 157.0
-margin_bottom = 30.0
+margin_bottom = 20.0
 text = "X4"
 
-[node name="TextureRect" type="TextureRect" parent="Control"]
-margin_right = 40.0
-margin_bottom = 40.0
+[node name="GetAngles" type="Button" parent="Control/MissionControl"]
+margin_top = 248.0
+margin_right = 338.0
+margin_bottom = 268.0
+text = "Get Angles"
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="TelemetryTimer" type="Timer" parent="."]
+wait_time = 0.4
+autostart = true
 
 [node name="ControlTimer" type="Timer" parent="."]
 wait_time = 0.2
 autostart = true
-
-[node name="Viewport" type="Viewport" parent="."]
 [connection signal="button_up" from="Control/MissionControl/Connect" to="." method="_on_Button_button_up"]
-[connection signal="button_up" from="Control/MissionControl/ThrottleMode/Mode/All" to="." method="_on_All_button_up"]
-[connection signal="button_up" from="Control/MissionControl/ThrottleMode/Mode/X1" to="." method="_on_X1_button_up"]
-[connection signal="button_up" from="Control/MissionControl/ThrottleMode/Mode/X2" to="." method="_on_X2_button_up"]
-[connection signal="button_up" from="Control/MissionControl/ThrottleMode/Mode/X3" to="." method="_on_X3_button_up"]
-[connection signal="button_up" from="Control/MissionControl/ThrottleMode/Mode/X4" to="." method="_on_X4_button_up"]
+[connection signal="button_up" from="Control/MissionControl/Mode/All" to="." method="_on_All_button_up"]
+[connection signal="button_up" from="Control/MissionControl/Mode/X1" to="." method="_on_X1_button_up"]
+[connection signal="button_up" from="Control/MissionControl/Mode/X2" to="." method="_on_X2_button_up"]
+[connection signal="button_up" from="Control/MissionControl/Mode/X3" to="." method="_on_X3_button_up"]
+[connection signal="button_up" from="Control/MissionControl/Mode/X4" to="." method="_on_X4_button_up"]
+[connection signal="button_up" from="Control/MissionControl/GetAngles" to="." method="_on_GetAngles_button_up"]
+[connection signal="timeout" from="TelemetryTimer" to="." method="_on_TelemetryTimer_timeout"]
 [connection signal="timeout" from="ControlTimer" to="." method="_on_Timer_timeout"]

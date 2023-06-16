@@ -33,7 +33,8 @@ mod app {
     use crate::spatial::{SpatialOrientationDevice, GYRO_FREQUENCY_HZ};
     use common::{SpatialOrientation, QuadState, MotorsMode};
     use common::COMMANDS_SIZE;
-    use common::postcard::from_bytes;
+    use common::postcard::{from_bytes, to_vec};
+    use common::heapless;
 
 
 
@@ -261,10 +262,13 @@ mod app {
     #[task(binds = TIM2, local = [usart2_tx], shared = [state], priority = 1)]
     fn telemetry(mut cx: telemetry::Context) {
         // todo:
-        // let tx: &mut Tx<USART2> = cx.local.usart2_tx;
-        // IntoIterator::into_iter(s.to_byte_array())
-        //     .for_each(|byt| { nb::block!(tx.write(byt)).unwrap() });
-        // nb::block!(tx.write(EOT)).unwrap();
+        cx.shared.state.lock(|s| {
+            let tx: &mut Tx<USART2> = cx.local.usart2_tx;
+            let packet: heapless::Vec<u8, 30> = to_vec(s).expect("unable to serialize to buff");
+            IntoIterator::into_iter(packet)
+                .for_each(|byt| { nb::block!(tx.write(byt)).unwrap() });
+            rprintln!("State sent")
+        })
 
         // cx.shared.state.lock(|state| {
         //     rprintln!("T {:?}", state);
