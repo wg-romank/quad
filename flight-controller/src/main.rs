@@ -31,7 +31,7 @@ mod app {
     use systick_monotonic::*;
 
     use crate::spatial::{SpatialOrientationDevice, GYRO_FREQUENCY_HZ};
-    use common::{SpatialOrientation, QuadState, MotorsMode};
+    use common::{SpatialOrientation, QuadState};
     use common::COMMANDS_SIZE;
     use common::postcard::{from_bytes, to_vec};
     use common::heapless;
@@ -217,38 +217,10 @@ mod app {
                 };
 
                 let max_duty: f32 = u16::MAX as f32;
-                match mode {
-                    MotorsMode::All => {
-                        cx.local.pwm.3.set_duty((max_duty * (t + dx1)) as u16);
-                        cx.local.pwm.2.set_duty((max_duty * (t + dx2)) as u16);
-                        cx.local.pwm.1.set_duty((max_duty * (t + dx3)) as u16);
-                        cx.local.pwm.0.set_duty((max_duty * (t + dx4)) as u16);
-                    },
-                    MotorsMode::X1 => {
-                        cx.local.pwm.3.set_duty((max_duty * (t + dx1)) as u16);
-                        cx.local.pwm.2.set_duty(0);
-                        cx.local.pwm.1.set_duty(0);
-                        cx.local.pwm.0.set_duty(0);
-                    },
-                    MotorsMode::X2 => {
-                        cx.local.pwm.3.set_duty(0);
-                        cx.local.pwm.2.set_duty((max_duty * (t + dx2)) as u16);
-                        cx.local.pwm.1.set_duty(0);
-                        cx.local.pwm.0.set_duty(0);
-                    },
-                    MotorsMode::X3 => {
-                        cx.local.pwm.3.set_duty(0);
-                        cx.local.pwm.2.set_duty(0);
-                        cx.local.pwm.1.set_duty((max_duty * (t + dx3)) as u16);
-                        cx.local.pwm.0.set_duty(0);
-                    },
-                    MotorsMode::X4 => {
-                        cx.local.pwm.3.set_duty(0);
-                        cx.local.pwm.2.set_duty(0);
-                        cx.local.pwm.1.set_duty(0);
-                        cx.local.pwm.0.set_duty((max_duty * (t + dx4)) as u16);
-                    }
-                }
+                cx.local.pwm.3.set_duty((mode.is_x1_enabled() * max_duty * (t + dx1)) as u16);
+                cx.local.pwm.2.set_duty((mode.is_x2_enabled() * max_duty * (t + dx2)) as u16);
+                cx.local.pwm.1.set_duty((mode.is_x3_enabled() * max_duty * (t + dx3)) as u16);
+                cx.local.pwm.0.set_duty((mode.is_x4_enabled() * max_duty * (t + dx4)) as u16);
 
                 if led_on {
                     cx.local.led.set_low();
