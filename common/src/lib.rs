@@ -41,7 +41,7 @@ pub struct QuadState {
     pub led: bool,
     pub stabilisation: bool,
     pub desired_orientation: SpatialOrientation,
-    pub mode: MotorsMode,
+    pub mode: MotorsModeCombined,
     // todo:
     // orientation: SpatialOrientation
 }
@@ -53,7 +53,7 @@ impl Default for QuadState {
             led: false,
             stabilisation: false,
             desired_orientation: SpatialOrientation { pitch: 0., roll: 0. },
-            mode: MotorsMode::All,
+            mode: MotorsModeCombined(0b1111),
         }
     }
 }
@@ -70,32 +70,44 @@ impl QuadState {
             Commands::Angles(p, r) =>
                 self.desired_orientation = SpatialOrientation { pitch: p, roll: r },
             Commands::SwitchMode(m) =>
-                self.mode = m,
+                self.mode.0 = m,
         }
     }
 }
 
 use core::f32::consts::PI;
 
+#[repr(u8)]
 #[derive(Serialize, Deserialize, Debug)]
 #[cfg_attr(feature = "godot", derive(ToVariant, FromVariant))]
 pub enum MotorsMode {
-    All, X1, X2, X3, X4
+    X1 = 0b1000,
+    X2 = 0b0100,
+    X3 = 0b0010,
+    X4 = 0b0001
 }
 
-impl From<u32> for  MotorsMode {
-    fn from(v: u32) -> Self {
-        match v {
-            0 => Self::All,
-            1 => Self::X1,
-            2 => Self::X2,
-            3 => Self::X3,
-            4 => Self::X4,
-            _ => panic!("wrong value {}, expected range 0-4", v)
-        }
+#[derive(Serialize, Deserialize, Debug)]
+#[cfg_attr(feature = "godot", derive(ToVariant, FromVariant))]
+pub struct MotorsModeCombined(u8);
+
+impl MotorsModeCombined {
+    pub fn is_x1_enabled(&self) -> f32 {
+        (self.0 & MotorsMode::X1 as u8) as f32
+    }
+
+    pub fn is_x2_enabled(&self) -> f32 {
+        (self.0 & MotorsMode::X2 as u8) as f32
+    }
+
+    pub fn is_x3_enabled(&self) -> f32 {
+        (self.0 & MotorsMode::X3 as u8) as f32
+    }
+
+    pub fn is_x4_enabled(&self) -> f32 {
+        (self.0 & MotorsMode::X4 as u8) as f32
     }
 }
-
 
 #[derive(Serialize, Deserialize, Debug)]
 #[cfg_attr(feature = "godot", derive(ToVariant, FromVariant))]
@@ -104,7 +116,7 @@ pub enum Commands {
     Stabilisation(bool),
     Led(bool),
     Angles(f32, f32),
-    SwitchMode(MotorsMode)
+    SwitchMode(u8)
 }
 
 pub const COMMANDS_SIZE: usize = core::mem::size_of::<Commands>();
