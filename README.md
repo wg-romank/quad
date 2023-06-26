@@ -47,11 +47,12 @@ Battery terminals are shared betewen `DC+/-` connections on mosfet driver and `3
 
 # Todos
 
+- [x] Share state types between client and device libraries
+- [ ] Map controller to throttle correction and try to fly without stabilisation
 - [ ] Test naive stabilisation
-- [ ] Share state types between client and device libraries
+- [ ] Send state telemetry from device
 - [ ] Update mission control UI to include state
 - [ ] Check if Tokio or any other runtime can help to buffer telemetry on the client in separate task/thread
-- [ ] Send state telemetry from device
 
 # Potential upgrades
 
