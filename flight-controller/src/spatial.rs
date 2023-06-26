@@ -17,8 +17,8 @@ impl SpatialOrientationDevice for SpatialOrientation {
     }
 
     fn adjust(&mut self, gyro: Vector3<f32>, acc: Vector2<f32>) {
-        let mut new_pitch = self.pitch + gyro.x * GYRO_DT;
-        let mut new_roll = self.roll + gyro.y * GYRO_DT;
+        let new_pitch = self.pitch + gyro.x * GYRO_DT;
+        let new_roll = self.roll + gyro.y * GYRO_DT;
 
         // new_pitch += self.roll * libm::sinf(gyro.z * GYRO_DT);
         // new_roll -= self.pitch * libm::sinf(gyro.z * GYRO_DT);

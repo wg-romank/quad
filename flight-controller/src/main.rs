@@ -65,7 +65,6 @@ mod app {
         usart2_tx: Tx<USART2>,
         pwm: PWM,
         led: Pin<Output<PushPull>, CRH, 'C', 13>,
-        count: u32,
     }
 
     #[init]
@@ -87,7 +86,7 @@ mod app {
         // RTC
         let mut pwr = dp.PWR;
         let mut backup = rcc.bkp.constrain(dp.BKP, &mut pwr);
-        let mut rtc = Rtc::new(dp.RTC, &mut backup);
+        let rtc = Rtc::new(dp.RTC, &mut backup);
 
         // BLUETOOTH
         let mut gpioa = dp.GPIOA.split();
@@ -152,7 +151,7 @@ mod app {
         let pb8 = gpiob.pb8.into_alternate_push_pull(&mut gpiob.crh);
         let pb9 = gpiob.pb9.into_alternate_push_pull(&mut gpiob.crh);
 
-        let mut pwm = Timer::tim4(dp.TIM4, &clocks).pwm::<Tim4NoRemap, _, _, _>(
+        let pwm = Timer::tim4(dp.TIM4, &clocks).pwm::<Tim4NoRemap, _, _, _>(
             (pb6, pb7, pb8, pb9), &mut afio.mapr, 200.hz()
         );
         let mut channels = pwm.split();
@@ -178,7 +177,6 @@ mod app {
                 usart2_tx,
                 pwm: channels,
                 led,
-                count: 0,
             },
             init::Monotonics(mono),
         )
@@ -201,7 +199,7 @@ mod app {
     }
 
     #[task(binds = TIM3, local = [pwm, led], shared = [mpu, state, rtc], priority = 1)]
-    fn gyro(mut cx: gyro::Context) {
+    fn gyro(cx: gyro::Context) {
         let mpu = cx.shared.mpu;
         let state = cx.shared.state;
         let rtc = cx.shared.rtc;
@@ -258,9 +256,9 @@ mod app {
     }
 
     #[task(binds = USART2, local = [recv], shared = [state, rtc], priority = 2)]
-    fn on_rx(mut cx: on_rx::Context) {
+    fn on_rx(cx: on_rx::Context) {
         if let Some(rx) = cx.local.recv.take() {
-            let (buf, mut rx) = rx.stop();
+            let (buf, rx) = rx.stop();
 
             if let Ok(command) = from_bytes(&buf[0]) {
                 let state = cx.shared.state;
