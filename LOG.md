@@ -57,3 +57,13 @@ todos:
 - improve communication to limit number of messages sent and ensure commands do not clog the queue
 - reduce control frequency, possibly split gyro into separate task to do median filtering on acc with high frequency
 - implement heartbeat & throttle cutoff for safety
+
+
+26/06/23
+========
+- implemented masking to enalbe specific motors for testing
+- tested current draw with lab bench DC: 1 + 3 and 2 + 4 motors current draw is different of up to 1 amp
+- implemented basic safety with RTC to set throttle to 0 if last command was sent more than a second ago
+
+todos:
+- map controller stick to motors correction & try to fly
