@@ -14,6 +14,7 @@ mod app {
     use stm32f1xx_hal::device::USART2;
     use stm32f1xx_hal::dma::CircBuffer;
     use stm32f1xx_hal::gpio::{Output, PushPull, CRH};
+    use stm32f1xx_hal::rtc::Rtc;
     use stm32f1xx_hal::timer::{Timer, Tim4NoRemap, Event as TEvent};
     use stm32f1xx_hal::{
         gpio::{
@@ -54,7 +55,8 @@ mod app {
     #[shared]
     struct Shared {
         state: common::QuadState,
-        mpu: Option<(MPU, Vector3<f32>, SpatialOrientation)>
+        mpu: Option<(MPU, Vector3<f32>, SpatialOrientation)>,
+        rtc: Rtc,
     }
 
     #[local]
@@ -81,6 +83,11 @@ mod app {
         let clocks = rcc.cfgr.freeze(&mut flash.acr);
 
         let mono: MyMono = Systick::new(cp.SYST, clocks.sysclk().0);
+
+        // RTC
+        let mut pwr = dp.PWR;
+        let mut backup = rcc.bkp.constrain(dp.BKP, &mut pwr);
+        let mut rtc = Rtc::new(dp.RTC, &mut backup);
 
         // BLUETOOTH
         let mut gpioa = dp.GPIOA.split();
@@ -163,7 +170,8 @@ mod app {
         (
             Shared {
                 state: QuadState::default(),
-                mpu: None
+                mpu: None,
+                rtc,
             },
             Local {
                 recv: Some(rx_transfer),
@@ -192,20 +200,22 @@ mod app {
         })
     }
 
-    #[task(binds = TIM3, local = [pwm, led], shared = [mpu, state], priority = 1)]
+    #[task(binds = TIM3, local = [pwm, led], shared = [mpu, state, rtc], priority = 1)]
     fn gyro(mut cx: gyro::Context) {
         let mpu = cx.shared.mpu;
         let state = cx.shared.state;
+        let rtc = cx.shared.rtc;
 
-        (mpu, state).lock(|m, state| {
+        (mpu, state, rtc).lock(|m, state, rtc| {
             if let Some((mpu, offset, s)) = m {
                 let raw_gyro = mpu.get_gyro().expect("unable to get gyro");
                 let angles = mpu.get_acc_angles().expect("unable to get acc angles");
 
                 s.adjust(raw_gyro - *offset, angles);
                 rprintln!("{:?}", s);
+                rprintln!("current time {:?}", rtc.current_time());
 
-                let t = state.throttle;
+                let t = state.throttle(rtc.current_time());
                 let led_on = state.led;
                 let mode = &state.mode;
                 let stab_on = state.stabilisation;
@@ -247,13 +257,19 @@ mod app {
         // });
     }
 
-    #[task(binds = USART2, local = [recv], shared = [state], priority = 2)]
+    #[task(binds = USART2, local = [recv], shared = [state, rtc], priority = 2)]
     fn on_rx(mut cx: on_rx::Context) {
         if let Some(rx) = cx.local.recv.take() {
             let (buf, mut rx) = rx.stop();
 
             if let Ok(command) = from_bytes(&buf[0]) {
-                cx.shared.state.lock(|state| state.update(command));
+                let state = cx.shared.state;
+                let rtc = cx.shared.rtc;
+
+                (state, rtc).lock(|state, rtc| {
+                    let time = rtc.current_time();
+                    state.update(command, time)
+                });
             }
 
             let (rx, channel) = rx.release();
