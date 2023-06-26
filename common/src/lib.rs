@@ -37,7 +37,9 @@ impl SpatialOrientation {
 #[derive(Debug, Serialize, Deserialize)]
 #[cfg_attr(feature = "godot", derive(ToVariant, FromVariant))]
 pub struct QuadState {
-    pub throttle: f32,
+    // time from RTC is in seconds
+    pub last_command_time: u32,
+    throttle: f32,
     pub led: bool,
     pub stabilisation: bool,
     pub desired_orientation: SpatialOrientation,
@@ -49,6 +51,7 @@ pub struct QuadState {
 impl Default for QuadState {
     fn default() -> Self {
         Self {
+            last_command_time: 0,
             throttle: 0.0,
             led: false,
             stabilisation: false,
@@ -59,7 +62,15 @@ impl Default for QuadState {
 }
 
 impl QuadState {
-    pub fn update(&mut self, command: Commands) {
+    pub fn throttle(&self, time: u32) -> f32 {
+        if self.last_command_time.abs_diff(time) <= 1 {
+            self.throttle
+        } else {
+            0.0
+        }
+    }
+    pub fn update(&mut self, command: Commands, time: u32) {
+        self.last_command_time = time;
         match command {
             Commands::Throttle(t) =>
                 self.throttle = t,
