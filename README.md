@@ -2,6 +2,10 @@
 
 Drone in the making
 
+Top | Bottom
+:--:|:------:
+![Top view](resources/top.jpg)|![Bottom view](resources/bottom.jpg)
+
 # Project overview
 
 Project is split in 3 crates as well as Godot project.
