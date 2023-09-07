@@ -1,6 +1,9 @@
-# quad
+# Overview
 
-Drone in the making
+Brushed quadcopter design. Main goal for this project is to develop a platform for testing flight controller algorithms, mainly stabilisation, out of least amount of off-the-shelf parts. It is built around 4-channel MOSFET driver YYNMOS-4 and uses Bluetooth for communication.
+
+While there are plenty quadcopter designs out there, they seem to fall in two main categories: custom flight controllers with BLDC motors and FPV-setups with brushed motors and ready-made flight controllers. This repo tries to adress lack of materials around brushed designs with custom flight controllers.
+
 
 Top | Bottom
 :--:|:------:
