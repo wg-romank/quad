@@ -9,7 +9,7 @@ Top | Bottom
 :--:|:------:
 ![Top view](resources/top.jpg)|![Bottom view](resources/bottom.jpg)
 
-# Project overview
+# Crates
 
 Project is split in 3 crates as well as Godot project.
 
